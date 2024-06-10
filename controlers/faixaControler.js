@@ -3,10 +3,14 @@ import FaixaFinanceira from '../models/faixaFinanceira.js';
 import Ticket from '../models/TbTIcket.js';
 
 const regions = {
-    'Sudeste': ['11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28', '31', '32', '33', '34', '35', '37', '38'],
-    'Sul+Centro-Oeste': ['41', '42', '43', '44', '45', '46', '47', '48', '49', '51', '53', '54', '55', '61', '62', '64', '65', '66', '67'],
-    'Norte+Nordeste': ['63', '68', '69', '71', '73', '74', '75', '77', '79', '81', '82', '83', '84', '85', '86', '87', '88', '89', '91', '92', '93', '94', '95', '96', '97', '98', '99']
+    'SDT 1': ['11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24'],
+    'SDT 2': ['27', '28', '31', '32', '33', '34', '35', '37', '38'],
+    'SCO 1': ['41', '42', '43', '44', '45', '46', '47', '48', '49', '61', '65', '66'],
+    'SCO 2': ['51', '53', '54', '55', '62', '64', '67'],
+    'NOR 1': ['63', '68', '69', '71', '73', '74', '75', '77', '81', '84', '87', '92', '95', '97'],
+    'NOR 2': ['79', '82', '83', '85', '86', '88', '89', '91', '93', '94', '96', '98', '99']
   };
+  
   
 
 async function VerifyFaixa(valor, id) {
@@ -72,8 +76,8 @@ function extractDDD(phoneNumber) {
 function findRegionByDDD(ddd) {
     if (ddd === 'Invalid') return 'Invalid'
     console.log(ddd)
-    for (const key in regioes) {
-        if (regioes[key].includes(ddd)) {
+    for (const key in regions) {
+        if (regions[key].includes(ddd)) {
             return key;
         }
     }
