@@ -35,13 +35,15 @@ async function VerifyFaixa(valor, id) {
         if (!faixa) {
             return {
                 region,
-                name: 'Nada Consta'
+                name: 'Nada Consta',
+                valor
             };
         }
-        return { name: faixa.name , region, };
+        return { name: faixa.name , region, valor };
     } catch (error) {
         return {
             region,
+            valor,
             name: 'Nada Consta'
         };
     }

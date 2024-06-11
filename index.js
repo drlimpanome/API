@@ -12,6 +12,7 @@ import { consultDocument } from './utils/consultDocument.js'; // Importar a fun√
 import { downloadpdf } from './utils/consultDocument.js';
 import Consultas from './models/tbconsultas.js'
 import Ticket from './models/TbTIcket.js'
+import { formatCurrency } from './utils/formatNumber.js'
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
 const app = express();
@@ -343,17 +344,19 @@ app.get('/pdf/:id', async (req, res) => {
             throw new Error('A consulta ainda n√£o foi finalizada.');
         }
         const urlParts = getUrlAndStatus.url.split("_");
-        const fullUrl = `https://${req.get('host')}/download/${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
-        const { name, region } = await VerifyFaixa(parseFloat(getUrlAndStatus.divida), idTicket);
+        const fullUrl = `${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
+        const returno = await VerifyFaixa(parseFloat(getUrlAndStatus.divida), idTicket);
         // await addUnidade(region, idTicket)
 
         return res.status(200).json({
             message: 'Upload successful',
             url: fullUrl,
-            divida: name,
-            unidade: region,
+            faixa: returno.name,
+            unidade: returno.region,
+            divida: formatCurrency(returno.valor),
         });
     } catch (err) {
+        console.log(err)
         const idTicket = req.params.id;
         const region = await verifyRegion(idTicket)
         // await addUnidade(region, idTicket)
