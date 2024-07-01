@@ -1,7 +1,7 @@
 import DataTypes from 'sequelize';
 import sequelize from '../database.js'; // Ensure this path matches your Sequelize connection setup
 
-const Ticket = sequelize.define('tbtickets', {
+const Ticket = sequelize.define('tbTickets', {
     id_ticket: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -26,7 +26,7 @@ const Ticket = sequelize.define('tbtickets', {
         defaultValue: DataTypes.NOW
     }
 }, {
-    tableName: 'tbtickets', // Use the table name as per your schema
+    tableName: 'tbTickets', // Use the table name as per your schema
     timestamps: false // Assuming you're manually handling the `created_at` timestamp
 });
 
