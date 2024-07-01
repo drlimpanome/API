@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
   "devDependencies": {
     "sequelize-cli": "^6.6.2"
   },

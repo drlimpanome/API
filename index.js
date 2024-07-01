@@ -16,7 +16,7 @@ import { formatCurrency } from './utils/formatNumber.js'
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
 const app = express();
-const port = 3000;
+const port = 80;
 
 let connection;
 
