@@ -12,6 +12,7 @@ import { consultDocument } from './utils/consultDocument.js'; // Importar a fun�
 import { downloadpdf } from './utils/consultDocument.js';
 import Consultas from './models/tbconsultas.js'
 import Ticket from './models/TbTIcket.js'
+import path from 'path'
 import { formatCurrency } from './utils/formatNumber.js'
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
@@ -75,8 +76,6 @@ app.post('/consultDocument/:id', async (req, res) => {
 
     try {
         const { status, data, pdfUrl, clientName } = await consultDocument(numeroDocumento);
-        
-        console.log(status, data, pdfUrl)
         const filteredData = filterRelevantData(data);
         const totalDebt = calculateTotalDebt(filteredData);
 
@@ -89,15 +88,7 @@ app.post('/consultDocument/:id', async (req, res) => {
                 const path = 'pdfs/' + pdfUrl.split('/').pop();
                 fs.writeFileSync(path, buffer, 'base64');
                 console.log('PDF downloaded and saved:', path);
-                await uploadFileToS3(path, `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`); 
-                // const update = await Consultas.update({ url: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`, divida: totalDebt, status_id: 3 }, { where: { id_ticket: idTicket } });
-                fs.unlink(path, (err) => {
-                    if (err) {
-                      console.error('Error deleting the file:', err);
-                      return;
-                    }
-                    console.log('File deleted successfully');
-                  });
+                await Consultas.update({ url: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`, divida: totalDebt, status_id: 3 }, { where: { id_ticket: idTicket } });
             } catch (error) {
                 return res.status(400).json({ status: 'error', message: 'Erro ao baixar o PDF:' + error.message });
             }
@@ -268,15 +259,24 @@ app.get('/download/:fileName', async (req, res) => {
     const document = urlSplit.pop(); // Removes and returns the last element
     const name = urlSplit.join(" "); // Joins the remaining elements with "_"
     const fileName = `${name}_${document}`;
+
     if (fileName) {
         try {
-            const presignedUrl = await generatePresignedUrl(fileName);
-            res.redirect(presignedUrl);
+            const filePath = path.join('pdfs', fileName);
+            res.download(filePath, fileName, (err) => {
+                if (err) {
+                    console.error('Error downloading file:', err);
+                    res.status(500).send('Erro ao baixar o arquivo.');
+                }
+            });
         } catch (error) {
-            res.status(500).send('Erro ao gerar URL pré-assinada.');
+            console.error('Erro ao baixar o arquivo:', error);
+            res.status(500).send('Erro ao baixar o arquivo.');
         }
+    } else {
+        res.status(400).send('Nome do arquivo inválido.');
     }
-})
+});
 
 app.post('/resetUnidade', async (req, res) => {
     try {

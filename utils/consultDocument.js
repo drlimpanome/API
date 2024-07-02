@@ -19,11 +19,10 @@ const connection = mysql.createConnection({
 
 
 export async function consultDocument(numeroDocumento) {
-
     const validationResult = validateDocument(numeroDocumento);
     console.log(validationResult, numeroDocumento)
     if (!validationResult.isValid) {
-        return res.status(400).json({ status: 'invalid_document', undefined });
+        throw new Error(`Erro ao consultar o documento: documento invalido`);
     }
     const tk = await getConfereTK()
     if (!tk) {

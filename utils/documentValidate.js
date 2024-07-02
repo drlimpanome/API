@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 export function validateDocument(document) {
     // Remove non-numeric characters
     if (!document) return { type: 'Unknown', isValid: false };
@@ -29,7 +31,6 @@ export function validateDocument(document) {
 export async function getConfereTK() {
     const urlToken = 'http://localhost:81/get_token_confere'
     const response = await fetch(urlToken);
-    console.log(response)
     const tokenObj = JSON.parse(await response.text())
     return tokenObj.token
 }
