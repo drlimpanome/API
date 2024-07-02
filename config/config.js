@@ -5,7 +5,7 @@ const sequelizeConfig = {
   development: {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: 'positivonacional5',
+    database: 'drlimpanome',
     host: process.env.DB_HOST,
     dialect: 'mysql',
     logging: false, // Set to true if you want to see SQL logs in your console
@@ -21,7 +21,7 @@ const sequelizeConfig = {
   production: {
     username: process.env.USER,
     password: process.env.DB_PASSWORD, // It's a good practice to use environment variables for production
-    database: 'positivonacional5',
+    database: 'drlimpanome',
     host: process.env.DB_HOST,
     dialect: 'mysql',
     logging: false,
