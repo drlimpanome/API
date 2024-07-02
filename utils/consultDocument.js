@@ -174,11 +174,11 @@ async function insertDataIntoTables(contactId, data) {
     }
 }
 
-// Função para atualizar o status da consulta na tabela tbConsultas
+// Função para atualizar o status da consulta na tabela tbconsultas
 async function updateConsultStatus(idTicket, status) {
     try {
         const updateSql = `
-            UPDATE tbConsultas 
+            UPDATE tbconsultas 
             SET status_id = ?, updated_at = current_timestamp(), updated_by = "BOT1" 
             WHERE id_ticket = ?
         `;

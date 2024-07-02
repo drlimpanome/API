@@ -2,7 +2,7 @@ import DataTypes from 'sequelize';
 import sequelize from '../database.js';
 import StatusConsulta from './statusConsulta.js'; // Make sure this path is correct
 
-const Consultas = sequelize.define('tbConsultas', {
+const Consultas = sequelize.define('tbconsultas', {
     id_consulta: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -46,7 +46,7 @@ const Consultas = sequelize.define('tbConsultas', {
         allowNull: true               // Assuming the URL is not mandatory
     }
 }, {
-    tableName: 'tbConsultas',
+    tableName: 'tbconsultas',
     timestamps: false
 });
 

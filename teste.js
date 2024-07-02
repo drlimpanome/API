@@ -648,7 +648,7 @@ async function insertDataIntoTables(ticketId, data) {
 async function updateConsultStatus(ticketId, status) {
     try {
         const updateSql = `
-            UPDATE tbConsultas 
+            UPDATE tbconsultas 
             SET status_id = ?, updated_at = current_timestamp(), updated_by = "BOT1" 
             WHERE ticket_id = ?
         `;

@@ -192,32 +192,32 @@ app.post('/ticketGenerate', (req, res) => {
     const { contactid, whatsappid } = req.body;
 
     // Consulta SQL para inserir dados na tabela tbTickets
-    const ticketSql = 'INSERT INTO tbTickets (contact_id, whatsapp_id) VALUES (?, ?)';
+    const ticketSql = 'INSERT INTO tbtickets (contact_id, whatsapp_id) VALUES (?, ?)';
     const ticketValues = [contactid, whatsappid];
 
-    // Executar a consulta SQL para inserção na tabela tbTickets
+    // Executar a consulta SQL para inserção na tabela tbtickets
     connection.query(ticketSql, ticketValues, (err, ticketResult) => {
         if (err) {
-            console.error('Erro ao inserir dados na tabela tbTickets: ' + err.message);
-            return res.status(500).send('Erro ao inserir dados na tabela tbTickets');
+            console.error('Erro ao inserir dados na tabela tbtickets: ' + err.message);
+            return res.status(500).send('Erro ao inserir dados na tabela tbtickets');
         }
         
-        // ID gerado pela inserção na tabela tbTickets
+        // ID gerado pela inserção na tabela tbtickets
         const idTicktet = ticketResult.insertId;
         console.log('Novo registro de ticket inserido com ID: ' + idTicktet);
         
-        // Consulta SQL para inserir dados na tabela tbConsultas
-        const consultaSql = 'INSERT INTO tbConsultas (id_ticket, contact_id) VALUES (?, ?)';
+        // Consulta SQL para inserir dados na tabela tbconsultas
+        const consultaSql = 'INSERT INTO tbconsultas (id_ticket, contact_id) VALUES (?, ?)';
         const consultaValues = [idTicktet, contactid]; // Defina o status como 'Pendente' por padrão e utilize a data atual
 
-        // Executar a consulta SQL para inserção na tabela tbConsultas
+        // Executar a consulta SQL para inserção na tabela tbconsultas
         connection.query(consultaSql, consultaValues, async (err, consultaResult) => {
             if (err) {
-                console.error('Erro ao inserir dados na tabela tbConsultas: ' + err.message);
-                return res.status(500).send('Erro ao inserir dados na tabela tbConsultas');
+                console.error('Erro ao inserir dados na tabela tbconsultas: ' + err.message);
+                return res.status(500).send('Erro ao inserir dados na tabela tbconsultas');
             }
             
-            // ID gerado pela inserção na tabela tbConsultas
+            // ID gerado pela inserção na tabela tbconsultas
             const idConsult = consultaResult.insertId;
             console.log('Nova consulta inserida com ID: ' + idConsult);
             let region;
