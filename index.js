@@ -12,12 +12,17 @@ import { consultDocument } from './utils/consultDocument.js'; // Importar a fun√
 import { downloadpdf } from './utils/consultDocument.js';
 import Consultas from './models/tbconsultas.js'
 import Ticket from './models/TbTIcket.js'
-import path from 'path'
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { formatCurrency } from './utils/formatNumber.js'
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
 const app = express();
 const port = 80;
+
+// Workaround to define __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let connection;
 
@@ -85,7 +90,7 @@ app.post('/consultDocument/:id', async (req, res) => {
                 const pdfBuffer = buffer.toString('base64');
                 const filteredData = {};
                 filteredData['pdf_base64'] = pdfBuffer;
-                const path = 'pdfs/' + `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`;
+                const path = `pdfs/${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`;
                 fs.writeFileSync(path, buffer, 'base64');
                 console.log('PDF downloaded and saved:', path);
                 await Consultas.update({ url: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`, divida: totalDebt, status_id: 3 }, { where: { id_ticket: idTicket } });
@@ -255,16 +260,23 @@ app.get('/test/:id', async (req, res) => {
 });
 
 app.get('/download/:fileName', async (req, res) => {
-    const urlSplit = req.params.fileName
+    const fileName = req.params.fileName;
+    
     if (fileName) {
         try {
-            const filePath = path.join('pdfs', urlSplit);
-            res.download(filePath, fileName, (err) => {
-                if (err) {
-                    console.error('Error downloading file:', err);
-                    res.status(500).send('Erro ao baixar o arquivo.');
-                }
-            });
+            const filePath = path.join(__dirname, 'pdfs', fileName);
+            
+            // Check if the file exists before attempting to download it
+            if (fs.existsSync(filePath)) {
+                res.download(filePath, fileName, (err) => {
+                    if (err) {
+                        console.error('Error downloading file:', err);
+                        res.status(500).send('Erro ao baixar o arquivo.');
+                    }
+                });
+            } else {
+                res.status(404).send('Arquivo n√£o encontrado.');
+            }
         } catch (error) {
             console.error('Erro ao baixar o arquivo:', error);
             res.status(500).send('Erro ao baixar o arquivo.');
