@@ -271,20 +271,17 @@ app.get('/download/:fileName', async (req, res) => {
         try {
             const filePath = path.join(__dirname, 'pdfs', fileName);
             
-            // Check if the file exists before attempting to download it
+            // Check if the file exists before attempting to serve it
             if (fs.existsSync(filePath)) {
-                res.download(filePath, fileName, (err) => {
-                    if (err) {
-                        console.error('Error downloading file:', err);
-                        res.status(500).send('Erro ao baixar o arquivo.');
-                    }
-                });
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'inline; filename=' + fileName);
+                fs.createReadStream(filePath).pipe(res);
             } else {
                 res.status(404).send('Arquivo não encontrado.');
             }
         } catch (error) {
-            console.error('Erro ao baixar o arquivo:', error);
-            res.status(500).send('Erro ao baixar o arquivo.');
+            console.error('Erro ao visualizar o arquivo:', error);
+            res.status(500).send('Erro ao visualizar o arquivo.');
         }
     } else {
         res.status(400).send('Nome do arquivo inválido.');
