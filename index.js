@@ -85,7 +85,7 @@ app.post('/consultDocument/:id', async (req, res) => {
                 const pdfBuffer = buffer.toString('base64');
                 const filteredData = {};
                 filteredData['pdf_base64'] = pdfBuffer;
-                const path = 'pdfs/' + pdfUrl.split('/').pop();
+                const path = 'pdfs/' + `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`;
                 fs.writeFileSync(path, buffer, 'base64');
                 console.log('PDF downloaded and saved:', path);
                 await Consultas.update({ url: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`, divida: totalDebt, status_id: 3 }, { where: { id_ticket: idTicket } });
@@ -255,14 +255,10 @@ app.get('/test/:id', async (req, res) => {
 });
 
 app.get('/download/:fileName', async (req, res) => {
-    const urlSplit = req.params.fileName.split("_");
-    const document = urlSplit.pop(); // Removes and returns the last element
-    const name = urlSplit.join(" "); // Joins the remaining elements with "_"
-    const fileName = `${name}_${document}`;
-
+    const urlSplit = req.params.fileName
     if (fileName) {
         try {
-            const filePath = path.join('pdfs', fileName);
+            const filePath = path.join('pdfs', urlSplit);
             res.download(filePath, fileName, (err) => {
                 if (err) {
                     console.error('Error downloading file:', err);
