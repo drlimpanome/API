@@ -86,22 +86,27 @@ app.post('/consultDocument/:id', async (req, res) => {
 
         if (pdfUrl) {
             try {
-                const buffer = await downloadpdf(pdfUrl);
-                const pdfBuffer = buffer.toString('base64');
-                const filteredData = {};
-                filteredData['pdf_base64'] = pdfBuffer;
-                const path = `pdfs/${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`;
-                fs.writeFileSync(path, buffer, 'base64');
-                console.log('PDF downloaded and saved:', path);
-                await Consultas.update({ url: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`, divida: totalDebt, status_id: 3 }, { where: { id_ticket: idTicket } });
+                const buffer = await downloadpdf(pdfUrl);                
+                const sanitizedClientName = clientName.replace(/ /g, '_'); // Replace spaces with underscores
+                const fileName = `${sanitizedClientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf`;
+                const filePath = path.join(__dirname, 'pdfs', fileName);
+                
+                fs.writeFileSync(filePath, buffer, 'base64');
+                console.log('PDF downloaded and saved:', filePath);
+                
+                await Consultas.update({ 
+                    url: fileName, 
+                    divida: totalDebt, 
+                    status_id: 3 
+                }, { where: { id_ticket: idTicket } });
             } catch (error) {
-                return res.status(400).json({ status: 'error', message: 'Erro ao baixar o PDF:' + error.message });
+                return res.status(400).json({ status: 'error', message: 'Erro ao baixar o PDF: ' + error.message });
             }
         }
 
         return res.status(200).json({ status, totalDebt, data: filteredData, pdfUrl: `${clientName}_${numeroDocumento.replace(/[^\d]/g, '')}.pdf` });
     } catch (error) {
-        console.log(error)
+        console.log(error);
         console.error('Erro ao consultar o documento:', error.message);
         return res.status(400).json({ status: 'error', message: 'Ocorreu um erro ao consultar o documento.' });
     }
