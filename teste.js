@@ -8,7 +8,7 @@ dotenv.config();
 const connection = mysql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: 'positivonacional5',
+    database: 'drlimpanome',
     host: process.env.DB_HOST,
 });
 
@@ -648,7 +648,7 @@ async function insertDataIntoTables(ticketId, data) {
 async function updateConsultStatus(ticketId, status) {
     try {
         const updateSql = `
-            UPDATE tbConsultas 
+            UPDATE tbconsultas 
             SET status_id = ?, updated_at = current_timestamp(), updated_by = "BOT1" 
             WHERE ticket_id = ?
         `;

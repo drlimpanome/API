@@ -13,17 +13,16 @@ dotenv.config();
 const connection = mysql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: 'positivonacional5',
+    database: 'drlimpanome',
     host: process.env.DB_HOST,
 });
 
 
 export async function consultDocument(numeroDocumento) {
-
     const validationResult = validateDocument(numeroDocumento);
     console.log(validationResult, numeroDocumento)
     if (!validationResult.isValid) {
-        return res.status(400).json({ status: 'invalid_document', undefined });
+        throw new Error(`Erro ao consultar o documento: documento invalido`);
     }
     const tk = await getConfereTK()
     if (!tk) {
@@ -174,11 +173,11 @@ async function insertDataIntoTables(contactId, data) {
     }
 }
 
-// Função para atualizar o status da consulta na tabela tbConsultas
+// Função para atualizar o status da consulta na tabela tbconsultas
 async function updateConsultStatus(idTicket, status) {
     try {
         const updateSql = `
-            UPDATE tbConsultas 
+            UPDATE tbconsultas 
             SET status_id = ?, updated_at = current_timestamp(), updated_by = "BOT1" 
             WHERE id_ticket = ?
         `;
