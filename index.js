@@ -28,12 +28,16 @@ import { formatCurrency } from "./utils/formatNumber.js";
 import cors from "cors"; // Import cors
 import { Op } from "sequelize";
 import multer from "multer";
+import { signInWithEmailAndPassword } from "./controlers/AuthControler.js";
+import authRouter from "./router/authRouter.js";
+import usersRouter from "./router/usersRouter.js";
+import consultasRouter from "./router/ConsultasRouter.js";
 const upload = multer({ storage: multer.memoryStorage() });
 
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
 const app = express();
-const port = 3000;
+const port = 3001;
 
 // Workaround to define __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -677,6 +681,10 @@ const httpsOptions = {
 
 // Criar servidor HTTPS
 const server = http.createServer(/*httpsOptions, */ app);
+
+app.use("/auth", authRouter);
+app.use("/users", usersRouter);
+app.use("/consultas", consultasRouter);
 
 // Iniciar o servidor
 server.listen(port, () => {
