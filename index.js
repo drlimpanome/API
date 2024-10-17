@@ -35,7 +35,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 dotenv.config(); // This ensures that environment variables from your .env file are loaded
 
 const app = express();
-const port = 3000;
+const port = 80;
 
 // Workaround to define __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
