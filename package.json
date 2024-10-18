@@ -20,6 +20,7 @@
     "node-fetch": "^3.3.2",
     "pdfkit": "^0.15.0",
     "puppeteer": "^23.3.0",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "swagger": "^0.7.5"
   }
 }

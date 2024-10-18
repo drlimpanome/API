@@ -28,7 +28,8 @@ import { formatCurrency } from "./utils/formatNumber.js";
 import cors from "cors"; // Import cors
 import { Op } from "sequelize";
 import multer from "multer";
-import swaggerDocs from "./swagger.js";
+import puppeteer from 'puppeteer';
+// import swaggerDocs from "./swagger.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -96,6 +97,11 @@ process.on("uncaughtException", (err) => {
 
 // HTML Template Generator
 function generateHTML(dataMap) {
+  // Verifica se dataMap, dataMap.header e dataMap.data são definidos
+  if (!dataMap || !dataMap.header || !dataMap.data) {
+    throw new Error("Dados inválidos: o objeto dataMap está incompleto.");
+  }
+
   return `
   <!DOCTYPE html>
   <html lang="en">
@@ -202,6 +208,7 @@ function generateHTML(dataMap) {
   `;
 }
 
+
 /**
  * @swagger
  * /generate-pdf:
@@ -233,9 +240,6 @@ function generateHTML(dataMap) {
  *       500:
  *         description: Erro ao gerar o PDF
  */
-
-
-// API Endpoint to Generate PDF
 app.post("/generate-pdf", async (req, res) => {
   const dataMap = req.body; // Assuming the incoming data matches the DataTable structure
 
@@ -314,8 +318,6 @@ app.post("/generate-pdf", async (req, res) => {
  *       400:
  *         description: Erro ao consultar o documento
  */
-
-
 app.post("/consultDocument/:id", async (req, res) => {
   const { numeroDocumento } = req.body;
   const idTicket = req.params.id;
@@ -378,6 +380,7 @@ app.get("/", (req, res) => {
     "<html><head><title>Hello</title></head><body><h1>Hello, World!</h1></body></html>"
   );
 });
+
 /**
  * @swagger
  * /inserir:
@@ -457,7 +460,6 @@ app.post("/inserir", (req, res) => {
  *       500:
  *         description: Erro ao consultar o ticket
  */
-
 app.post("/ticketConsult", async (req, res) => {
   // Dados recebidos da solicitação
   const { contactid, whatsappid } = req.body;
@@ -545,7 +547,6 @@ app.post("/ticketConsult", async (req, res) => {
  *       500:
  *         description: Erro ao gerar o ticket
  */
-
 app.post("/ticketGenerate", (req, res) => {
   // Dados recebidos da solicitação
   const { contactid, whatsappid } = req.body;
@@ -922,7 +923,6 @@ app.get("/not-consulted", async (req, res) => {
  *       500:
  *         description: Erro ao consultar informações do PDF
  */
-
 app.get("/pdf/:id", async (req, res) => {
   try {
     const idTicket = req.params.id;
@@ -1015,9 +1015,9 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
   }
 
   try {
-    // Upload the file to S3 or handle it as needed
-    console.log(file.path);
-    const response = await uploadFileToS3(file, fileName);
+    // Salvar o arquivo localmente
+    const filePath = path.join(__dirname, "pdfs", fileName);
+    fs.writeFileSync(filePath, file.buffer);
 
     await Consultas.update(
       { url: fileName, status_id: 3, divida },
@@ -1026,7 +1026,7 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
 
     return res.status(200).json({
       message: "Upload successful",
-      url: response.Location,
+      url: `/download/${fileName}`,
     });
   } catch (err) {
     console.error(err);
@@ -1043,8 +1043,8 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
 
 // Opções do servidor HTTPS
 const httpsOptions = {
-  key: fs.readFileSync("./positivonacional5.pem"),
-  cert: fs.readFileSync("./positivonacional5.crt"),
+  key: fs.readFileSync("./drlimpanome.pem"),
+  cert: fs.readFileSync("./drlimpanome.crt"),
 };
 
 // Criar servidor HTTPS
@@ -1055,4 +1055,4 @@ server.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
 });
 
-swaggerDocs(app, port);
+//swaggerDocs(app, port);
