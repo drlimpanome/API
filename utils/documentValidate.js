@@ -105,46 +105,40 @@ export function calculateTotalDebt(data) {
     const debts = new Set();
     const ignoreList = new Set();
 
-    // Iterar sobre as tabelas scpc, protesto e refin_pefin
+    if (!data || typeof data !== 'object') {
+        console.warn("Formato de dados inválido para cálculo de dívida.");
+        return "0.00";
+    }
+
     Object.keys(data).forEach(table => {
         const entries = data[table];
-        // Extrair a data e valor de cada entradacontato@positivonacional.com.br"
+        if (!Array.isArray(entries)) {
+            console.warn(`Tabela ${table} está vazia ou mal formatada.`);
+            return;
+        }
+
         entries.forEach(entry => {
-        let { data: date, valor: value } = entry;
-        if (table === 'devedores') {
-           value = entry.vlr_conv;
-        }
-        if (date && value) {
-            let valueNumeric = parseFloat(value.replace('R$', '').replace('.', '').replace(',', '.').trim());
-            if (isNaN(valueNumeric)) {
-                // Tentar encontrar outra chave com "R$" no valor
-                for (let key in entry) {
-                  if (entry[key].includes('R$')) {
-                    value = entry[key];
-                    valueNumeric = parseFloat(value.replace('R$', '').replace('.', '').replace(',', '.').trim());
-                    if (!isNaN(valueNumeric)) {
-                      break;
-                    }
-                  }
-                }
-              }
-        
-              if (date && !isNaN(valueNumeric)) {
+            let { data: date, valor: value } = entry;
+            
+            // Verificar se o valor é uma string antes de usar replace()
+            if (typeof value === 'string') {
+                value = value.replace('R$', '').replace('.', '').replace(',', '.').trim();
+            }
+            
+            const valueNumeric = parseFloat(value);
+
+            if (date && !isNaN(valueNumeric)) {
                 debts.add({ date, value: valueNumeric, table });
-              }
-        }
-        })
+            }
+        });
     });
 
     let totalDebt = 0;
     debts.forEach(debt => {
         if (ignoreList.has(debt)) return;
-        // Encontrar duplicados com o mesmo valor e mesma data ou com tabelas diferentes
-        const duplicates = Array.from(debts).filter(d => d.value === debt.value && (d.date === debt.date || d.table !== debt.table));
-        duplicates.forEach(dup => ignoreList.add(dup));
-
         totalDebt += debt.value;
     });
 
     return totalDebt.toFixed(2);
 }
+

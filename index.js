@@ -28,7 +28,8 @@ import { formatCurrency } from "./utils/formatNumber.js";
 import cors from "cors"; // Import cors
 import { Op } from "sequelize";
 import multer from "multer";
-import puppeteer from 'puppeteer';
+import puppeteer from "puppeteer";
+import FormData from "form-data";
 // import swaggerDocs from "./swagger.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -76,12 +77,20 @@ handleDisconnect();
 // Middleware para análise de corpo de solicitação JSON
 app.use(express.json());
 
-app.use(cors());
+
+app.use(
+  cors({
+    origin: "*", // Permitir todas as origens. Para mais segurança, substitua pelo domínio específico.
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something broke!");
+  res.status(500).json({ message: "Ocorreu um erro interno", error: err.message });
 });
+
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
@@ -97,114 +106,89 @@ process.on("uncaughtException", (err) => {
 
 // HTML Template Generator
 function generateHTML(dataMap) {
-  // Verifica se dataMap, dataMap.header e dataMap.data são definidos
-  if (!dataMap || !dataMap.header || !dataMap.data) {
-    throw new Error("Dados inválidos: o objeto dataMap está incompleto.");
+  // Validação inicial
+  if (!dataMap || !dataMap.header || !dataMap.data || typeof dataMap.data !== 'object') {
+    throw new Error("Dados inválidos: o objeto dataMap está incompleto ou no formato incorreto.");
   }
 
-  return `
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Report</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      table th, table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      table th {
-        background-color: #f2f2f2;
-      }
-      .tr-header {
-        background-color: #333;
-        color: white;
-        font-weight: bold;
-        text-align: left;
-        padding: 8px;
-      }
-      .client-info-header {
-        font-weight: bold;
-      }
-      footer {
-        text-align: center;
-        margin-top: 20px;
-        font-size: 12px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="pdf-container">
-      <!-- Header Table -->
+  // Gerar HTML do cabeçalho
+  const headerHtml = Object.entries(dataMap.header).map(([key, value]) => `
+    <tr>
+      <th>${key}:</th>
+      <td>${value}</td>
+    </tr>
+  `).join('');
+
+  // Gerar tabelas dinâmicas para cada categoria de dados
+  const tablesHtml = Object.entries(dataMap.data).map(([tableName, rows]) => {
+    if (rows.length === 0) {
+      return ''; // Se não houver dados, não exibe a tabela
+    }
+
+    // Gerar as linhas da tabela
+    const rowsHtml = rows.map(row => `
+      <tr>
+        <td>${row.data || ''}</td>
+        <td>${row.tipo || ''}</td>
+        <td>${row.aval || ''}</td>
+        <td>${row.valor || ''}</td>
+        <td>${row.contrato || ''}</td>
+        <td>${row.origem || ''}</td>
+      </tr>
+    `).join('');
+
+    // Retornar a tabela completa com o nome da tabela e seus dados
+    return `
       <table>
         <thead>
           <tr>
-            <th colSpan="2" class="tr-header">DADOS PESSOAIS</th>
+            <th colspan="6">${tableName}</th>
+          </tr>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Aval</th>
+            <th>Valor (R$)</th>
+            <th>Contrato</th>
+            <th>Origem</th>
           </tr>
         </thead>
         <tbody>
-          ${Object.entries(dataMap.header)
-            .map(
-              ([key, value]) => `
-            <tr>
-              <th class='client-info-header'>${key}</th>
-              <td>${value}</td>
-            </tr>
-          `
-            )
-            .join("")}
+          ${rowsHtml}
         </tbody>
       </table>
+    `;
+  }).join('');
 
-      <!-- Data Tables -->
-      ${dataMap.data
-        .map(
-          (tableData) => `
-        <table>
-          <thead>
-            <tr>
-              <th colSpan="${tableData.colunmName.length}" class="tr-header">
-                ${tableData.title.toUpperCase()}
-              </th>
-            </tr>
-            <tr>
-              ${tableData.colunmName.map((col) => `<th>${col}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${tableData.rows
-              .map(
-                (row) => `
-              <tr>
-                ${row.map((cell) => `<td>${cell}</td>`).join("")}
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `
-        )
-        .join("")}
-
-      <!-- Footer -->
-      <footer>
-        <p>Gerado por Dr. limpa nome</p>
-      </footer>
-    </div>
-  </body>
-  </html>
+  // Retornar o HTML completo
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Relatório</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        table th { background-color: #f2f2f2; }
+        .tr-header { background-color: #333; color: white; font-weight: bold; padding: 8px; }
+      </style>
+    </head>
+    <body>
+      <h1>Relatório</h1>
+      <table>
+        <thead>
+          <tr><th colspan="2">DADOS BÁSICOS</th></tr>
+        </thead>
+        <tbody>
+          ${headerHtml}
+        </tbody>
+      </table>
+      ${tablesHtml}
+    </body>
+    </html>
   `;
 }
 
@@ -241,39 +225,80 @@ function generateHTML(dataMap) {
  *         description: Erro ao gerar o PDF
  */
 app.post("/generate-pdf", async (req, res) => {
-  const dataMap = req.body; // Assuming the incoming data matches the DataTable structure
+  const { header, data } = req.body;
+  const { idTicket, fileName } = req.query;
+  console.log("Dados recebidos:", { header, data });
 
+  let browser;
   try {
-    // Launch Puppeteer and generate the PDF
-    const browser = await puppeteer.launch();
+    // Calcular a dívida, verificando se os dados estão no formato correto
+    const divida = calculateTotalDebt(data);
+
+    // Lançar o navegador
+    browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
 
-    // Set content as HTML
-    const htmlContent = generateHTML(dataMap);
+    // Validar se data é um array, se não for, definir como um array vazio
+    // const validData =  Object.entries(data[0]);
+    
+    const htmlContent = generateHTML({ header, data, divida });
+
+    if (!htmlContent) {
+      throw new Error("Conteúdo HTML gerado é inválido.");
+    }
+
     await page.setContent(htmlContent);
 
-    // Generate PDF
+    // Aguardar a renderização
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Gerar o PDF
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
     });
 
-    await browser.close();
+    // Garantir que fileName não seja indefinido e evitar conflitos de nome
+    const safeFileName = fileName || "default.pdf";
+    const filePath = path.join(__dirname, "pdfs", safeFileName);
 
-    // Set the response headers to force download
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="report.pdf"',
-      "Content-Length": pdfBuffer.length,
+    // Tentar salvar o arquivo com um novo nome se o original estiver em uso
+    let finalFilePath = filePath;
+    let count = 1;
+    while (fs.existsSync(finalFilePath) && isFileInUse(finalFilePath)) {
+      finalFilePath = path.join(
+        __dirname,
+        "pdfs",
+        `${safeFileName.replace(".pdf", "")}_${count}.pdf`
+      );
+      count++;
+    }
+
+    fs.writeFileSync(finalFilePath, pdfBuffer);
+
+    res.status(200).json({
+      message: "PDF gerado com sucesso"
     });
-
-    // Send the PDF buffer as the response
-    res.send(pdfBuffer);
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error generating PDF");
+    console.error("Erro ao gerar o PDF:", error.message, error.stack);
+    res.status(500).send("Erro ao gerar e enviar o PDF");
+  } finally {
+    // Fechar o navegador, mesmo que ocorra um erro
+    if (browser) {
+      await browser.close();
+    }
   }
 });
+
+// Função para verificar se um arquivo está em uso
+function isFileInUse(filePath) {
+  try {
+    fs.accessSync(filePath, fs.constants.R_OK | fs.constants.W_OK);
+    return false; // O arquivo não está em uso
+  } catch (err) {
+    return true; // O arquivo está em uso
+  }
+}
 
 /**
  * @swagger
@@ -1007,16 +1032,18 @@ const unlinkFile = util.promisify(fs.unlink);
  */
 app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
   const idTicket = req.params.id;
-  const file = req.file; // The uploaded file
+  const file = req.file; // Arquivo enviado
   const { fileName, divida } = req.body;
 
   if (!file) {
-    return res.status(400).json({ message: "No file uploaded" });
+    return res.status(400).json({ message: "Nenhum arquivo enviado" });
   }
 
   try {
-    // Salvar o arquivo localmente
-    const filePath = path.join(__dirname, "pdfs", fileName);
+    // Salvar o arquivo localmente antes de fazer o upload
+    const filePath = path.join(__dirname, "pdfs", fileName || 'default.pdf');
+    
+    // Certifique-se que o arquivo foi corretamente salvo antes de iniciar o upload
     fs.writeFileSync(filePath, file.buffer);
 
     await Consultas.update(
@@ -1025,27 +1052,25 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "Upload successful",
+      message: "Upload realizado com sucesso",
       url: `/download/${fileName}`,
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: "Upload failed",
+      message: "Falha no upload",
     });
-  } // */
-  res.status(200).json({
-    message: "Upload successful",
-  }); // */
+  }
 });
+
 
 //https://positivonacional5.com/download/EDSON_APARECIDO_SANTOS_02360965166.pdf
 
-// Opções do servidor HTTPS
-const httpsOptions = {
-  key: fs.readFileSync("./drlimpanome.pem"),
-  cert: fs.readFileSync("./drlimpanome.crt"),
-};
+// // Opções do servidor HTTPS
+// const httpsOptions = {
+//   key: fs.readFileSync("./drlimpanome.pem"),
+//   cert: fs.readFileSync("./drlimpanome.crt"),
+// };
 
 // Criar servidor HTTPS
 const server = http.createServer(/*httpsOptions, */ app);
