@@ -1047,7 +1047,7 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
     
     // Certifique-se que o arquivo foi corretamente salvo antes de iniciar o upload
     fs.writeFileSync(filePath, file.buffer);
-
+gi
     await Consultas.update(
       { url: fileName, status_id: 3, divida },
       { where: { id_ticket: idTicket } }
@@ -1073,7 +1073,7 @@ app.get('/get_cpfs', (req, res) => {
     GROUP BY documento
   `;
 
-  db.query(query, (err, results) => {
+  connection.query(query, (err, results) => {
     if (err) {
       console.error('Erro ao buscar CPFs:', err);
       return res.status(500).json({ error: 'Erro no servidor' });
@@ -1098,7 +1098,7 @@ app.put('/update_status', (req, res) => {
     WHERE id_ticket = ?
   `;
   
-  db.query(query, [status, bot, id], (err, result) => {
+  connection.query(query, [status, bot, id], (err, result) => {
     if (err) {
       console.error('Erro ao atualizar status:', err);
       return res.status(500).json({ error: 'Erro no servidor' });
@@ -1123,7 +1123,7 @@ const updateDivida = async (id, value) => {
   `;
 
   try {
-    const result = await db.query(query, [value, id]);
+    const result = await connection.query(query, [value, id]);
     if (result.affectedRows > 0) {
       return { message: 'Dívida atualizada com sucesso' };
     } else {
@@ -1148,7 +1148,7 @@ app.put('/update_url', (req, res) => {
     WHERE id_ticket = ?
   `;
 
-  db.query(query, [url, id], (err, result) => {
+  connection.query(query, [url, id], (err, result) => {
     if (err) {
       console.error('Erro ao atualizar URL:', err);
       return res.status(500).json({ error: 'Erro no servidor' });
@@ -1165,7 +1165,7 @@ app.get('/get_idTicket', (req, res) => {
   const cpf = req.query.cpf;
   const query = 'SELECT id_ticket FROM tbconsultas WHERE cpf = ? LIMIT 1';
 
-  db.query(query, [cpf], (err, result) => {
+  connection.query(query, [cpf], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err });
     }
