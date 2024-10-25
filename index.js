@@ -1065,6 +1065,31 @@ gi
   }
 });
 
+
+/**
+ * @swagger
+ * /get_cpfs:
+ *   get:
+ *     summary: Retrieve CPFs with the maximum ticket ID for each document
+ *     responses:
+ *       200:
+ *         description: A list of documents with their maximum ticket ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   documento:
+ *                     type: string
+ *                   id_ticket:
+ *                     type: integer
+ *       404:
+ *         description: No CPF found
+ *       500:
+ *         description: Server error occurred while fetching CPFs
+ */
 app.get('/get_cpfs', (req, res) => {
   const query = `
     SELECT documento, MAX(id_ticket) as id_ticket 
@@ -1086,6 +1111,44 @@ app.get('/get_cpfs', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /update_status:
+ *   put:
+ *     summary: Atualiza o status de um ticket
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *                 description: ID do ticket
+ *               status:
+ *                 type: integer
+ *                 description: Novo status do ticket
+ *               bot:
+ *                 type: string
+ *                 description: Nome do bot que atualiza o status
+ *     responses:
+ *       200:
+ *         description: Status atualizado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: ID, status ou bot ausentes
+ *       404:
+ *         description: Consulta não encontrada
+ *       500:
+ *         description: Erro no servidor
+ */
 app.put('/update_status', (req, res) => {
   const { id, status, bot } = req.body;
   if (!id || !status || !bot) {
@@ -1111,6 +1174,41 @@ app.put('/update_status', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /update_divida:
+ *   put:
+ *     summary: Atualiza a dívida de um ticket
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *                 description: ID do ticket
+ *               value:
+ *                 type: string
+ *                 description: Novo valor da dívida
+ *     responses:
+ *       200:
+ *         description: Dívida atualizada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: ID ou valor ausentes
+ *       404:
+ *         description: Consulta não encontrada
+ *       500:
+ *         description: Erro no servidor
+ */
 const updateDivida = async (id, value) => {
   if (!id || !value) {
     return { error: 'ID ou valor ausentes' };
@@ -1136,6 +1234,46 @@ const updateDivida = async (id, value) => {
 };
 
 
+/**
+ * @swagger
+ * /update_url:
+ *   put:
+ *     summary: Atualizar URL de um ticket
+ *     description: Atualizar a URL de um ticket
+ *     consumes:
+ *       - application/json
+ *     parameters:
+ *       - in: body
+ *         name: body
+ *         description: Objeto com o ID e a URL do ticket
+ *         schema:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: integer
+ *               required: true
+ *               description: ID do ticket
+ *             url:
+ *               type: string
+ *               required: true
+ *               description: URL do ticket
+ *     responses:
+ *       200:
+ *         description: URL atualizada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: ID ou URL ausentes
+ *       404:
+ *         description: Consulta não encontrada
+ *       500:
+ *         description: Erro no servidor
+ */
 app.put('/update_url', (req, res) => {
   const { id, url } = req.body;
   if (!id || !url) {
@@ -1161,11 +1299,40 @@ app.put('/update_url', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /get_idTicket:
+ *   get:
+ *     summary: Buscar o ID do ticket mais recente para um documento
+ *     description: Buscar o ID do ticket mais recente para um documento
+ *     parameters:
+ *       - in: query
+ *         name: documento
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Documento do ticket
+ *     responses:
+ *       200:
+ *         description: Ticket encontrado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 idTicket:
+ *                   type: integer
+ *                   description: ID do ticket mais recente
+ *       404:
+ *         description: Ticket não encontrado
+ *       500:
+ *         description: Erro no servidor
+ */
 app.get('/get_idTicket', (req, res) => {
-  const cpf = req.query.cpf;
-  const query = 'SELECT id_ticket FROM tbconsultas WHERE cpf = ? LIMIT 1';
+  const { documento } = req.query;
+  const query = 'SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1';
 
-  connection.query(query, [cpf], (err, result) => {
+  connection.query(query, [documento], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err });
     }
@@ -1173,10 +1340,12 @@ app.get('/get_idTicket', (req, res) => {
     if (result.length > 0) {
       res.json({ idTicket: result[0].id_ticket });
     } else {
-      res.status(404).json({ message: 'Ticket não encontrado para o CPF fornecido' });
+      res.status(404).json({ message: 'Ticket não encontrado para o documento fornecido' });
     }
   });
 });
+
+
 
 
 //https://positivonacional5.com/download/EDSON_APARECIDO_SANTOS_02360965166.pdf
