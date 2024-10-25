@@ -959,8 +959,10 @@ app.get("/pdf/:id", async (req, res) => {
     if (getUrlAndStatus.status_id !== "3") {
       throw new Error("A consulta ainda não foi finalizada.");
     }
-    const urlParts = getUrlAndStatus.url.split("_");
-    const fullUrl = `${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
+    // const urlParts = getUrlAndStatus.url.split("_");
+    // const fullUrl = `${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
+    
+    const fullUrl = `https://drlimpanome.site/download/${getUrlAndStatus.url}`
     const returno = await VerifyFaixa(
       parseFloat(getUrlAndStatus.divida),
       idTicket
@@ -1241,6 +1243,8 @@ const updateUrl = async (id, url) => {
   if (!id || !url) {
     return { error: 'ID ou URL ausentes' };
   }
+
+  // url = `https://drlimpanome.site/download/${url}`
 
   const query = `
     UPDATE tbconsultas 
