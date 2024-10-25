@@ -1,3 +1,8 @@
+const apiURL = 'https://drlimpanome.site'
+// const apiURL = 'http://localhost:80'
+let documento
+let idTicket
+
 // Função para extrair o texto de uma célula, removendo espaços extras
 function getTextFromCell(cell) {
     return cell.textContent.trim();
@@ -12,6 +17,10 @@ function getHeaderData() {
             const key = getTextFromCell(headerCells[0]).replace(":", "");
             const value = getTextFromCell(headerCells[1]);
             if (key && value) {
+                // if ( headerMap[key] === "CPF" ||  headerMap[key] === "CNPJ") {
+                //     document = value;
+                // }
+                
                 headerMap[key] = value;
             }
         }
@@ -42,49 +51,40 @@ function extractTableData(table, tableName) {
 }
 
 // Função para atualizar o status da consulta no backend
-function updateStatus(idTicket, status, bot) {
-    const url = `http://localhost:80/update_status`;
-    
-    fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            id: idTicket,
-            status: status,
-            bot: bot
-        })
+function updateStatus(id, status, bot) {
+const url = `${apiURL}/update_status`;
+
+fetch(url, {
+    method: 'PUT',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        id: id,
+        status: status,
+        bot: bot
     })
-    .then(response => response.json())
-    .then(data => console.log("Status atualizado:", data))
-    .catch(error => console.error("Erro ao atualizar status:", error));
+})
+.then(response => response.json())
+.then(data => console.log("Status atualizado:", data))
+.catch(error => console.error("Erro ao atualizar status:", error));
 }
 
-// Função para atualizar o valor da dívida no backend
-function updateDebtValue(idTicket, value) {
-    const url = `http://localhost:80/update_divida`;
-    
-    fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            id: idTicket,
-            value: value
-        })
-    })
-    .then(response => response.json())
-    .then(data => console.log("Dívida atualizada:", data))
-    .catch(error => console.error("Erro ao atualizar dívida:", error));
+// Função para obter o idTicket (exemplo de como seria implementado)
+async function obterIdTicket(documento) {
+    try {
+        const response = await fetch(`${apiURL}/get_idTicket?documento=${documento}`);
+        const data = await response.json();
+        console.log('ID do Ticket obtido:', data.idTicket);
+        return data.idTicket; // Retorna o `idTicket` para ser usado na função scrapeAndSendData
+    } catch (error) {
+        console.error('Erro ao obter idTicket:', error);
+    }
 }
 
 // Função principal que faz o scrape da página e envia os dados para a API
 function scrapeAndSendData() {
-    const idTicket = 123; // Substitua pelo ID real do ticket
-    const fileName = "relatorio_debitos.pdf"; // Substitua pelo nome real do arquivo
-
+    
     const tables = document.querySelectorAll('.table-striped');
     const dataTables = {};
 
@@ -95,6 +95,14 @@ function scrapeAndSendData() {
             dataTables[tableName] = extractTableData(table, tableName);
         }
     });
+
+    documento = getHeaderData().CPF;
+    idTicket = obterIdTicket(documento);
+
+    console.log(`idTicket: ${idTicket}`)
+
+    const nomeCliente = getHeaderData()["Nome do Cliente"];
+    const fileName = `${nomeCliente.replace(/\s/g, '_')}_${idTicket}.pdf`;
 
     // Verifique se os dados estão corretos no console
     console.log("Dados enviados:", {
@@ -109,7 +117,7 @@ function scrapeAndSendData() {
     };
 
     // Gera a URL com os parâmetros de query para gerar o PDF
-    const pdfUrl = `http://localhost:80/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+    const pdfUrl = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
 
     // Envia os dados para gerar o PDF
     fetch(pdfUrl, {
@@ -129,13 +137,13 @@ function scrapeAndSendData() {
         console.log("PDF gerado e salvo com sucesso.", data);
 
         // Exemplo: Após gerar o PDF, você pode atualizar o status da consulta
-        updateStatus(idTicket, 2, 'bot_atualizador'); // Atualiza o status para 'concluído' ou outro
-
-        // Exemplo: Atualizar o valor da dívida
-        const totalDebt = 19142.24; // Calcule ou obtenha o valor real da dívida
-        updateDebtValue(idTicket, totalDebt);
+        updateStatus(idTicket, 3, 'console_bot'); // Atualiza o status para 'concluído' ou outro
     })
-    .catch(error => console.error("Erro ao gerar o PDF:", error));
+    .catch(error => {
+        console.error("Erro ao gerar o PDF:", error)
+        updateStatus(idTicket, 4, 'console_bot');
+    });
+    
 }
 
 // Chame a função scrapeAndSendData para capturar os dados e enviar para a API

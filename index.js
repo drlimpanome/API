@@ -278,6 +278,8 @@ app.post("/generate-pdf", async (req, res) => {
 
     fs.writeFileSync(finalFilePath, pdfBuffer);
 
+    updateUrl(idTicket, fileName)
+
     res.status(200).json({
       message: "PDF gerado com sucesso"
     });
@@ -1234,50 +1236,10 @@ const updateDivida = async (id, value) => {
 };
 
 
-/**
- * @swagger
- * /update_url:
- *   put:
- *     summary: Atualizar URL de um ticket
- *     description: Atualizar a URL de um ticket
- *     consumes:
- *       - application/json
- *     parameters:
- *       - in: body
- *         name: body
- *         description: Objeto com o ID e a URL do ticket
- *         schema:
- *           type: object
- *           properties:
- *             id:
- *               type: integer
- *               required: true
- *               description: ID do ticket
- *             url:
- *               type: string
- *               required: true
- *               description: URL do ticket
- *     responses:
- *       200:
- *         description: URL atualizada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *       400:
- *         description: ID ou URL ausentes
- *       404:
- *         description: Consulta não encontrada
- *       500:
- *         description: Erro no servidor
- */
-app.put('/update_url', (req, res) => {
-  const { id, url } = req.body;
+
+const updateUrl = async (id, url) => {
   if (!id || !url) {
-    return res.status(400).json({ message: 'ID ou URL ausentes' });
+    return { error: 'ID ou URL ausentes' };
   }
 
   const query = `
@@ -1286,18 +1248,18 @@ app.put('/update_url', (req, res) => {
     WHERE id_ticket = ?
   `;
 
-  connection.query(query, [url, id], (err, result) => {
-    if (err) {
-      console.error('Erro ao atualizar URL:', err);
-      return res.status(500).json({ error: 'Erro no servidor' });
-    }
+  try {
+    const result = await connection.query(query, [url, id]);
     if (result.affectedRows > 0) {
-      return res.status(200).json({ message: 'URL atualizada com sucesso' });
+      return { message: 'URL atualizada com sucesso' };
     } else {
-      return res.status(404).json({ message: 'Consulta não encontrada' });
+      return { error: 'Consulta não encontrada' };
     }
-  });
-});
+  } catch (err) {
+    console.error('Erro ao atualizar URL:', err);
+    return { error: 'Erro no servidor' };
+  }
+};
 
 /**
  * @swagger
@@ -1329,20 +1291,48 @@ app.put('/update_url', (req, res) => {
  *         description: Erro no servidor
  */
 app.get('/get_idTicket', (req, res) => {
-  const { documento } = req.query;
-  const query = 'SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1';
+  
+  try {
 
-  connection.query(query, [documento], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: err });
-    }
+    // Documento (CPF ou CNPJ) recebido da solicitação
+    let document = req.query.documento;
+    console.log(document);
 
-    if (result.length > 0) {
-      res.json({ idTicket: result[0].id_ticket });
-    } else {
-      res.status(404).json({ message: 'Ticket não encontrado para o documento fornecido' });
+    // Validação do documento (CPF ou CNPJ)
+    const validationResult = validateDocument(document);
+    if (!validationResult.isValid) {
+      console.log("invalid_document");
+      return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
     }
-  });
+    
+    document = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+
+    console.log(validationResult, document)
+    if (!validationResult.isValid) {
+        // throw new Error(`Erro ao consultar o documento: documento invalido`);
+        return res.status(500).json({ erro: 'Documento inválido' });
+    }  
+
+    const query = 'SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1';
+
+    connection.query(query, [document], (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: err });
+      }
+
+      if (result.length > 0) {
+        console.log(`idTicket: ${result[0].id_ticket }`)
+        return res.status(200).json({ idTicket: result[0].id_ticket });
+      } else {
+        return res.status(404).json({ message: 'Ticket não encontrado para o documento fornecido' });
+      }
+    });
+
+    // Explicitly indicate that response handling is complete
+  } catch (e) {
+    return res.status(400).json({ message: e.message });
+    // Explicitly indicate that response handling is complete
+  }
 });
 
 
