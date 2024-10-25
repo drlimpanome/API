@@ -1,4 +1,3 @@
-
 // Função para extrair o texto de uma célula, removendo espaços extras
 function getTextFromCell(cell) {
     return cell.textContent.trim();
@@ -21,7 +20,6 @@ function getHeaderData() {
 }
 
 // Função para extrair dados de uma tabela e formatar como no formato esperado
-// Função para extrair dados de uma tabela e formatar como no formato esperado
 function extractTableData(table, tableName) {
     const rows = Array.from(table.querySelectorAll('tbody tr')).slice(1); // Ignorar a primeira linha do cabeçalho
     const dataRows = rows.map(row => {
@@ -43,9 +41,45 @@ function extractTableData(table, tableName) {
     return dataRows;
 }
 
+// Função para atualizar o status da consulta no backend
+function updateStatus(idTicket, status, bot) {
+    const url = `http://localhost:80/update_status`;
+    
+    fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: idTicket,
+            status: status,
+            bot: bot
+        })
+    })
+    .then(response => response.json())
+    .then(data => console.log("Status atualizado:", data))
+    .catch(error => console.error("Erro ao atualizar status:", error));
+}
 
+// Função para atualizar o valor da dívida no backend
+function updateDebtValue(idTicket, value) {
+    const url = `http://localhost:80/update_divida`;
+    
+    fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: idTicket,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => console.log("Dívida atualizada:", data))
+    .catch(error => console.error("Erro ao atualizar dívida:", error));
+}
 
-// Função principal que faz o scrape da página e envia os dados para a API
 // Função principal que faz o scrape da página e envia os dados para a API
 function scrapeAndSendData() {
     const idTicket = 123; // Substitua pelo ID real do ticket
@@ -74,11 +108,11 @@ function scrapeAndSendData() {
         data: dataTables
     };
 
-    // Gera a URL com os parâmetros de query
-    const url = `http://localhost:80/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+    // Gera a URL com os parâmetros de query para gerar o PDF
+    const pdfUrl = `http://localhost:80/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
 
-    // Envia os dados para a API
-    fetch(url, {
+    // Envia os dados para gerar o PDF
+    fetch(pdfUrl, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -93,6 +127,13 @@ function scrapeAndSendData() {
     })
     .then(data => {
         console.log("PDF gerado e salvo com sucesso.", data);
+
+        // Exemplo: Após gerar o PDF, você pode atualizar o status da consulta
+        updateStatus(idTicket, 2, 'bot_atualizador'); // Atualiza o status para 'concluído' ou outro
+
+        // Exemplo: Atualizar o valor da dívida
+        const totalDebt = 19142.24; // Calcule ou obtenha o valor real da dívida
+        updateDebtValue(idTicket, totalDebt);
     })
     .catch(error => console.error("Erro ao gerar o PDF:", error));
 }

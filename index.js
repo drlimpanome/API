@@ -234,6 +234,8 @@ app.post("/generate-pdf", async (req, res) => {
     // Calcular a dívida, verificando se os dados estão no formato correto
     const divida = calculateTotalDebt(data);
 
+    updateDivida(idTicket, divida)
+
     // Lançar o navegador
     browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
@@ -1061,6 +1063,119 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
       message: "Falha no upload",
     });
   }
+});
+
+app.get('/get_cpfs', (req, res) => {
+  const query = `
+    SELECT documento, MAX(id_ticket) as id_ticket 
+    FROM tbconsultas 
+    WHERE status_id = 1 
+    GROUP BY documento
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Erro ao buscar CPFs:', err);
+      return res.status(500).json({ error: 'Erro no servidor' });
+    }
+    if (results.length > 0) {
+      return res.status(200).json(results);
+    } else {
+      return res.status(404).json({ message: 'Nenhum CPF encontrado' });
+    }
+  });
+});
+
+app.put('/update_status', (req, res) => {
+  const { id, status, bot } = req.body;
+  if (!id || !status || !bot) {
+    return res.status(400).json({ message: 'ID, status ou bot ausentes' });
+  }
+
+  const query = `
+    UPDATE tbconsultas 
+    SET status_id = ?, updated_at = NOW(), updated_by = ?
+    WHERE id_ticket = ?
+  `;
+  
+  db.query(query, [status, bot, id], (err, result) => {
+    if (err) {
+      console.error('Erro ao atualizar status:', err);
+      return res.status(500).json({ error: 'Erro no servidor' });
+    }
+    if (result.affectedRows > 0) {
+      return res.status(200).json({ message: 'Status atualizado com sucesso' });
+    } else {
+      return res.status(404).json({ message: 'Consulta não encontrada' });
+    }
+  });
+});
+
+const updateDivida = async (id, value) => {
+  if (!id || !value) {
+    return { error: 'ID ou valor ausentes' };
+  }
+
+  const query = `
+    UPDATE tbconsultas 
+    SET divida = ? 
+    WHERE id_ticket = ?
+  `;
+
+  try {
+    const result = await db.query(query, [value, id]);
+    if (result.affectedRows > 0) {
+      return { message: 'Dívida atualizada com sucesso' };
+    } else {
+      return { error: 'Consulta não encontrada' };
+    }
+  } catch (err) {
+    console.error('Erro ao atualizar dívida:', err);
+    return { error: 'Erro no servidor' };
+  }
+};
+
+
+app.put('/update_url', (req, res) => {
+  const { id, url } = req.body;
+  if (!id || !url) {
+    return res.status(400).json({ message: 'ID ou URL ausentes' });
+  }
+
+  const query = `
+    UPDATE tbconsultas 
+    SET url = ? 
+    WHERE id_ticket = ?
+  `;
+
+  db.query(query, [url, id], (err, result) => {
+    if (err) {
+      console.error('Erro ao atualizar URL:', err);
+      return res.status(500).json({ error: 'Erro no servidor' });
+    }
+    if (result.affectedRows > 0) {
+      return res.status(200).json({ message: 'URL atualizada com sucesso' });
+    } else {
+      return res.status(404).json({ message: 'Consulta não encontrada' });
+    }
+  });
+});
+
+app.get('/get_idTicket', (req, res) => {
+  const cpf = req.query.cpf;
+  const query = 'SELECT id_ticket FROM tbconsultas WHERE cpf = ? LIMIT 1';
+
+  db.query(query, [cpf], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: err });
+    }
+
+    if (result.length > 0) {
+      res.json({ idTicket: result[0].id_ticket });
+    } else {
+      res.status(404).json({ message: 'Ticket não encontrado para o CPF fornecido' });
+    }
+  });
 });
 
 
