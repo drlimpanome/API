@@ -34,12 +34,11 @@ import FormData from "form-data";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-dotenv.config(); // This ensures that environment variables from your .env file are loaded
+dotenv.config();
 
 const app = express();
 const port = 80;
 
-// Workaround to define __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -74,13 +73,11 @@ const handleDisconnect = () => {
 
 handleDisconnect();
 
-// Middleware para análise de corpo de solicitação JSON
 app.use(express.json());
-
 
 app.use(
   cors({
-    origin: "*", // Permitir todas as origens. Para mais segurança, substitua pelo domínio específico.
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -91,20 +88,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Ocorreu um erro interno", error: err.message });
 });
 
-
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
-  // Optionally log the rejection and shut down gracefully
 });
 
-// Uncaught exceptions
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
-  // Optionally log the exception and shut down gracefully
   process.exit(1);
 });
 
-// HTML Template Generator
 function generateHTML(dataMap) {
   // Validação inicial
   if (!dataMap || !dataMap.header || !dataMap.data || typeof dataMap.data !== 'object') {
@@ -113,136 +105,145 @@ function generateHTML(dataMap) {
 
   // Gerar HTML do cabeçalho
   const headerHtml = Object.entries(dataMap.header).map(([key, value]) => `
-    <tr>
-      <th>${key}:</th>
-      <td>${value}</td>
-    </tr>
+      <tr>
+          <th>${key}:</th>
+          <td>${value}</td>
+      </tr>
   `).join('');
 
-  // Gerar tabelas dinâmicas para cada categoria de dados
-  const tablesHtml = Object.entries(dataMap.data).map(([tableName, rows]) => {
-    if (rows.length === 0) {
-      return ''; // Se não houver dados, não exibe a tabela
-    }
-
-    // Gerar as linhas da tabela
-    const rowsHtml = rows.map(row => `
+  // Adicionar o total da dívida no cabeçalho
+  const totalDebtFormatted = parseFloat(dataMap.divida).toFixed(2).replace('.', ',');
+  const totalDebtHtml = `
       <tr>
-        <td>${row.data || ''}</td>
-        <td>${row.tipo || ''}</td>
-        <td>${row.aval || ''}</td>
-        <td>${row.valor || ''}</td>
-        <td>${row.contrato || ''}</td>
-        <td>${row.origem || ''}</td>
+          <th>Total da Dívida:</th>
+          <td>R$ ${totalDebtFormatted}</td>
       </tr>
-    `).join('');
+  `;
 
-    // Retornar a tabela completa com o nome da tabela e seus dados
+  // Gerar tabelas de dívidas
+  const debtsTablesHtml = Object.entries(dataMap.data).map(([tableName, debts]) => {
+    if (!debts.length) return '';
+
+    // Obter todos os campos presentes nas dívidas desta tabela
+    const allFields = new Set();
+    debts.forEach(debt => {
+      Object.keys(debt).forEach(field => {
+        if (field !== 'table') {
+          allFields.add(field);
+        }
+      });
+    });
+
+    // Gerar cabeçalho específico para cada tabela
+    const tableHeaders = Array.from(allFields).map(key => `<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`).join('');
+
+    // Gerar linhas de dados
+    const debtsHtml = debts.map(debt => {
+      const debtValues = Array.from(allFields).map(key => {
+        let value = debt[key] || '';
+        if (key === 'valor' && value) {
+          value = `R$ ${parseFloat(value).toFixed(2).replace('.', ',')}`;
+        }
+        return `<td>${value}</td>`;
+      }).join('');
+      return `<tr>${debtValues}</tr>`;
+    }).join('');
+
     return `
+      <h2>${tableName}</h2>
       <table>
         <thead>
           <tr>
-            <th colspan="6">${tableName}</th>
-          </tr>
-          <tr>
-            <th>Data</th>
-            <th>Tipo</th>
-            <th>Aval</th>
-            <th>Valor (R$)</th>
-            <th>Contrato</th>
-            <th>Origem</th>
+            ${tableHeaders}
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml}
+          ${debtsHtml}
         </tbody>
       </table>
     `;
   }).join('');
 
-  // Retornar o HTML completo
+  // Retornar o HTML completo com ajustes estéticos
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Relatório</title>
+      <title>Relatório de Dívidas</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        table th { background-color: #f2f2f2; }
-        .tr-header { background-color: #333; color: white; font-weight: bold; padding: 8px; }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 12px;
+          margin: 20px;
+          color: #333;
+        }
+        h1 {
+          text-align: center;
+          color: #333;
+          font-size: 24px;
+          margin-bottom: 30px;
+        }
+        h2 {
+          margin-top: 40px;
+          color: #333;
+          font-size: 20px;
+          border-bottom: 2px solid #4CAF50;
+          padding-bottom: 5px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 25px;
+        }
+        table th, table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+        table th {
+          background-color: #4CAF50;
+          color: white;
+          font-weight: bold;
+          text-align: center;
+        }
+        table td {
+          text-align: center;
+        }
+        table tr:nth-child(even) {
+          background-color: #f2f2f2;
+        }
       </style>
     </head>
     <body>
-      <h1>Relatório</h1>
+      <h1>Relatório de Dívidas</h1>
       <table>
         <thead>
           <tr><th colspan="2">DADOS BÁSICOS</th></tr>
         </thead>
         <tbody>
           ${headerHtml}
+          ${totalDebtHtml}
         </tbody>
       </table>
-      ${tablesHtml}
+      ${debtsTablesHtml}
     </body>
     </html>
   `;
 }
 
 
-/**
- * @swagger
- * /generate-pdf:
- *   post:
- *     summary: Gera um PDF com base nos dados fornecidos
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               header:
- *                 type: object
- *                 description: Dados do cabeçalho do PDF
- *               data:
- *                 type: array
- *                 items:
- *                   type: object
- *                 description: Dados para preencher as tabelas do PDF
- *     responses:
- *       200:
- *         description: PDF gerado com sucesso
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       500:
- *         description: Erro ao gerar o PDF
- */
 app.post("/generate-pdf", async (req, res) => {
-  const { header, data } = req.body;
+  const { header, data, divida } = req.body;
   const { idTicket, fileName } = req.query;
-  console.log("Dados recebidos:", { header, data });
+  console.log("Dados recebidos:", { header, data, divida });
 
   let browser;
   try {
-    // Calcular a dívida, verificando se os dados estão no formato correto
-    const divida = calculateTotalDebt(data);
+    await updateDivida(idTicket, divida);
 
-    updateDivida(idTicket, divida)
-
-    // Lançar o navegador
-    browser = await puppeteer.launch({ headless: false });
+    browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
-    // Validar se data é um array, se não for, definir como um array vazio
-    // const validData =  Object.entries(data[0]);
-    
     const htmlContent = generateHTML({ header, data, divida });
 
     if (!htmlContent) {
@@ -251,48 +252,31 @@ app.post("/generate-pdf", async (req, res) => {
 
     await page.setContent(htmlContent);
 
-    // Aguardar a renderização
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Gerar o PDF
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
     });
 
-    // Garantir que fileName não seja indefinido e evitar conflitos de nome
     const safeFileName = fileName || "default.pdf";
     const filePath = path.join(__dirname, "pdfs", safeFileName);
 
-    // Tentar salvar o arquivo com um novo nome se o original estiver em uso
-    let finalFilePath = filePath;
-    let count = 1;
-    while (fs.existsSync(finalFilePath) && isFileInUse(finalFilePath)) {
-      finalFilePath = path.join(
-        __dirname,
-        "pdfs",
-        `${safeFileName.replace(".pdf", "")}_${count}.pdf`
-      );
-      count++;
-    }
+    fs.writeFileSync(filePath, pdfBuffer);
 
-    fs.writeFileSync(finalFilePath, pdfBuffer);
-
-    updateUrl(idTicket, fileName)
+    await updateUrl(idTicket, fileName);
 
     res.status(200).json({
-      message: "PDF gerado com sucesso"
+      message: "PDF gerado com sucesso",
     });
   } catch (error) {
     console.error("Erro ao gerar o PDF:", error.message, error.stack);
     res.status(500).send("Erro ao gerar e enviar o PDF");
   } finally {
-    // Fechar o navegador, mesmo que ocorra um erro
     if (browser) {
       await browser.close();
     }
   }
 });
+
 
 // Função para verificar se um arquivo está em uso
 function isFileInUse(filePath) {
@@ -408,52 +392,6 @@ app.get("/", (req, res) => {
   res.end(
     "<html><head><title>Hello</title></head><body><h1>Hello, World!</h1></body></html>"
   );
-});
-
-/**
- * @swagger
- * /inserir:
- *   post:
- *     summary: Insere dados na tabela de histórico
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               nome:
- *                 type: string
- *                 description: Nome da pessoa
- *               telefone:
- *                 type: string
- *                 description: Telefone de contato
- *               mensagem:
- *                 type: string
- *                 description: Mensagem associada
- *     responses:
- *       200:
- *         description: Dados inseridos com sucesso
- *       500:
- *         description: Erro ao inserir dados
- */
-app.post("/inserir", (req, res) => {
-  // Dados recebidos da solicitação
-  const { nome, telefone, mensagem } = req.body;
-
-  // Consulta SQL para inserir dados
-  const sql = "INSERT INTO history (nome, telefone, mensagem) VALUES (?, ?, ?)";
-  const values = [nome, telefone, mensagem];
-
-  // Executar a consulta SQL
-  connection.query(sql, values, (err, result) => {
-    if (err) {
-      console.error("Erro ao inserir dados: " + err.message);
-      return res.status(500).send("Erro ao inserir dados");
-    }
-    console.log("Novo registro inserido com ID: " + result.insertId);
-    return res.status(200).send("Dados inseridos com sucesso");
-  });
 });
 
 /**
@@ -633,41 +571,6 @@ app.post("/ticketGenerate", (req, res) => {
       }
     );
   });
-});
-
-app.get("/test/:id", async (req, res) => {
-  try {
-    const idTicket = req.params.id;
-    const getUrlAndStatus = await getUrlViaId(idTicket);
-    if (getUrlAndStatus.status_id !== "3") {
-      throw new Error("A consulta ainda não foi finalizada.");
-    }
-    const urlParts = getUrlAndStatus.url.split("_");
-    const fullUrl = `https://${req.get("host")}/download/${urlParts[0].replace(
-      / /g,
-      "_"
-    )}_${urlParts[1]}`;
-    const { name, region } = await VerifyFaixa(
-      parseFloat(getUrlAndStatus.divida),
-      idTicket
-    );
-    // await addUnidade(region, idTicket)
-
-    return res.status(200).json({
-      message: "Upload successful",
-      url: fullUrl,
-      divida: name,
-      unidade: region,
-    });
-  } catch (err) {
-    const idTicket = req.params.id;
-    const region = await verifyRegion(idTicket);
-    // await addUnidade(region, idTicket)
-    return res.status(200).json({
-      unidade: region,
-      message: "ocorreu um erro",
-    });
-  }
 });
 
 /**
@@ -1095,23 +998,17 @@ gi
  *         description: Server error occurred while fetching CPFs
  */
 app.get('/get_cpfs', (req, res) => {
-  const query = `
-    SELECT documento, MAX(id_ticket) as id_ticket 
-    FROM tbconsultas 
-    WHERE status_id = 1 
-    GROUP BY documento
-  `;
+
+  const query = `SELECT REPLACE(REPLACE(documento,'.',''),'-','') AS documento FROM tbconsultas WHERE status_id = 1 and LENGTH (DOCUMENTO) = 14 limit 1`;
 
   connection.query(query, (err, results) => {
-    if (err) {
-      console.error('Erro ao buscar CPFs:', err);
-      return res.status(500).json({ error: 'Erro no servidor' });
-    }
-    if (results.length > 0) {
-      return res.status(200).json(results);
-    } else {
-      return res.status(404).json({ message: 'Nenhum CPF encontrado' });
-    }
+      if (err) {
+          console.error('Erro ao obter CPFs:', err);
+          res.status(500).json({ error: 'Erro ao obter CPFs' });
+      } else {
+          const cpfList = results.map(row => row.documento);
+          res.json({ cpfList });
+      }
   });
 });
 
@@ -1153,10 +1050,10 @@ app.get('/get_cpfs', (req, res) => {
  *       500:
  *         description: Erro no servidor
  */
-app.put('/update_status', (req, res) => {
-  const { id, status, bot } = req.body;
-  if (!id || !status || !bot) {
-    return res.status(400).json({ message: 'ID, status ou bot ausentes' });
+app.put('/update_status_por_cpf', (req, res) => {
+  const { id_ticket, status, bot } = req.body;
+  if (!id_ticket || !status || !bot) {
+    return res.status(400).json({ message: 'idTicket, status ou bot ausentes' });
   }
 
   const query = `
@@ -1165,7 +1062,7 @@ app.put('/update_status', (req, res) => {
     WHERE id_ticket = ?
   `;
   
-  connection.query(query, [status, bot, id], (err, result) => {
+  connection.query(query, [status, bot, id_ticket], (err, result) => {
     if (err) {
       console.error('Erro ao atualizar status:', err);
       return res.status(500).json({ error: 'Erro no servidor' });
@@ -1177,6 +1074,8 @@ app.put('/update_status', (req, res) => {
     }
   });
 });
+
+
 
 /**
  * @swagger
@@ -1214,9 +1113,12 @@ app.put('/update_status', (req, res) => {
  *         description: Erro no servidor
  */
 const updateDivida = async (id, value) => {
-  if (!id || !value) {
+  if (!id || value == null) {
     return { error: 'ID ou valor ausentes' };
   }
+
+  // Arredondar para duas casas decimais
+  const valorArredondado = parseFloat(value.toFixed(2));
 
   const query = `
     UPDATE tbconsultas 
@@ -1224,17 +1126,18 @@ const updateDivida = async (id, value) => {
     WHERE id_ticket = ?
   `;
 
-  try {
-    const result = await connection.query(query, [value, id]);
-    if (result.affectedRows > 0) {
-      return { message: 'Dívida atualizada com sucesso' };
-    } else {
-      return { error: 'Consulta não encontrada' };
-    }
-  } catch (err) {
-    console.error('Erro ao atualizar dívida:', err);
-    return { error: 'Erro no servidor' };
-  }
+  return new Promise((resolve, reject) => {
+    connection.query(query, [valorArredondado, id], (err, result) => {
+      if (err) {
+        console.error('Erro ao atualizar dívida:', err);
+        reject({ error: 'Erro no servidor' });
+      } else if (result.affectedRows > 0) {
+        resolve({ message: 'Dívida atualizada com sucesso' });
+      } else {
+        resolve({ error: 'Consulta não encontrada' });
+      }
+    });
+  });
 };
 
 
@@ -1338,17 +1241,6 @@ app.get('/get_idTicket', (req, res) => {
     // Explicitly indicate that response handling is complete
   }
 });
-
-
-
-
-//https://positivonacional5.com/download/EDSON_APARECIDO_SANTOS_02360965166.pdf
-
-// // Opções do servidor HTTPS
-// const httpsOptions = {
-//   key: fs.readFileSync("./drlimpanome.pem"),
-//   cert: fs.readFileSync("./drlimpanome.crt"),
-// };
 
 // Criar servidor HTTPS
 const server = http.createServer(/*httpsOptions, */ app);

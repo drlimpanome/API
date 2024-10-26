@@ -1,9 +1,8 @@
-const apiURL = 'https://drlimpanome.site'
-// const apiURL = 'http://localhost:80'
-let documento
-let idTicket
+// const apiURL = 'https://drlimpanome.site'
+const apiURL = 'http://localhost:80';
+let documento;
 
-// Função para extrair o texto de uma célula, removendo espaços extras
+// Função para extrair o texto de uma célula
 function getTextFromCell(cell) {
     return cell.textContent.trim();
 }
@@ -17,10 +16,6 @@ function getHeaderData() {
             const key = getTextFromCell(headerCells[0]).replace(":", "");
             const value = getTextFromCell(headerCells[1]);
             if (key && value) {
-                // if ( headerMap[key] === "CPF" ||  headerMap[key] === "CNPJ") {
-                //     document = value;
-                // }
-                
                 headerMap[key] = value;
             }
         }
@@ -28,123 +23,320 @@ function getHeaderData() {
     return headerMap;
 }
 
-// Função para extrair dados de uma tabela e formatar como no formato esperado
+// Mapeamento dos campos por tabela
+const tableColumnMappings = {
+	'Pendências REFIN/PEFIN': {
+			data: ['data'],
+			tipo: ['tipo financ.'],
+			aval: ['aval'],
+			valor: ['valor (r$)'],
+			contrato: ['contrato'],
+			origem: ['origem']
+	},
+	'SERASA': {
+			data: ['data'],
+			tipo: ['tipo financ.'],
+			aval: ['aval'],
+			valor: ['valor (r$)'],
+			contrato: ['contrato'],
+			origem: ['origem']
+	},
+	'SERASA - Protesto': {
+			data: ['data'],
+			valor: ['valor protesto'],
+			cartorio: ['cartório'],
+			cidade: ['cidade'],
+			uf: ['uf']
+	},
+	'SERASA - Ação Judicial': {
+			data: ['data'],
+			tipo: ['natureza'],
+			valor: ['valor'],
+			vara: ['vara'],
+			cidade: ['cidade'],
+			uf: ['uf']
+	},
+	'SCPC': {
+			data: ['dt ocorr'],
+			tipo: ['tp devedor'],
+			nome: ['nome'],
+			valor: ['vr dívida', 'vr divida'],
+			cidade: ['cidade'],
+			uf: ['uf'],
+			contrato: ['contrato']
+	},
+	'Protesto': {
+			data: ['data'],
+			valor: ['valor protesto'],
+			cartorio: ['cartório'],
+			cidade: ['cidade'],
+			uf: ['uf']
+	},
+    // Adicione outros mapeamentos conforme necessário
+};
+
+// Função para extrair dados de uma tabela específica
 function extractTableData(table, tableName) {
-    const rows = Array.from(table.querySelectorAll('tbody tr')).slice(1); // Ignorar a primeira linha do cabeçalho
-    const dataRows = rows.map(row => {
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+    // Encontrar o índice da linha de cabeçalho
+    let headerRowIndex = rows.findIndex(row => {
+        return row.classList.contains('tdfon10tb') && row.classList.contains('fw-bold') && row.classList.contains('text-center');
+    });
+
+    if (headerRowIndex === -1) {
+        // Não encontrou o cabeçalho, não processa esta tabela
+        return [];
+    }
+
+    const headerRow = rows[headerRowIndex];
+    const dataRows = rows.slice(headerRowIndex + 1);
+
+    // **Ajuste aqui**: Verificar se a tabela não possui dados
+    const noDataRow = dataRows.find(row => row.classList.contains('text-danger'));
+    if (noDataRow) {
+        // Tabela sem dados, retorna array vazio
+        return [];
+    }
+
+    // Obter os nomes das colunas
+    const headerCells = Array.from(headerRow.querySelectorAll('td')).map(getTextFromCell);
+    const headers = headerCells.map(header => header.toLowerCase().trim());
+
+    // Mapear índices com base no nome das colunas
+    const columnIndices = {};
+    headers.forEach((header, index) => {
+        columnIndices[header] = index;
+    });
+
+    const mapping = tableColumnMappings[tableName];
+
+    if (!mapping) {
+        // Não há mapeamento para esta tabela, pula
+        return [];
+    }
+
+    const debts = [];
+
+    dataRows.forEach(row => {
         const cells = Array.from(row.querySelectorAll('td')).map(getTextFromCell);
-        
-        // Caso a célula de valor (índice 3) não exista ou seja vazia, trate como null
-        const value = cells[3] ? parseFloat(cells[3].replace('R$', '').replace('.', '').replace(',', '.').trim()) : null;
 
-        return {
-            data: cells[0] || "",  // Garantir que sempre haja valor na célula
-            tipo: cells[1] || "",  // Tipo financeiro (ou outro valor esperado)
-            aval: cells[2] || "",  // Aval (ou outro valor esperado)
-            valor: value || "",    // Valor
-            contrato: cells[4] || "",  // Contrato
-            origem: cells[5] || "",    // Origem ou outra coluna
-            table: tableName
-        };
-    }).filter(entry => entry.valor); // Filtrar entradas sem valor
-    return dataRows;
+        // Criar um objeto de dívida
+        const debtEntry = {};
+
+        Object.keys(mapping).forEach(field => {
+            const possibleHeaders = mapping[field];
+            let value = '';
+            for (let header of possibleHeaders) {
+                const index = columnIndices[header.toLowerCase()];
+                if (index !== undefined) {
+                    value = cells[index];
+                    break;
+                }
+            }
+            if (field === 'valor') {
+                value = value ? parseFloat(value.replace(/[^\d.,-]/g, '').replace('.', '').replace(',', '.').trim()) : null;
+                // Arredondar para duas casas decimais
+                value = value ? parseFloat(value.toFixed(2)) : null;
+            }
+            debtEntry[field] = value || '';
+        });
+
+        debts.push(debtEntry);
+    });
+
+    return debts;
 }
 
-// Função para atualizar o status da consulta no backend
-function updateStatus(id, status, bot) {
-    const url = `${apiURL}/update_status`;
-
-    fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            id: id,
-            status: status,
-            bot: bot
-        })
-    })
-    .then(response => response.json())
-    .then(data => console.log("Status atualizado:", data))
-    .catch(error => console.error("Erro ao atualizar status:", error));
-}
-
-// Função para obter o idTicket (exemplo de como seria implementado)
+// Função para obter o idTicket
 async function obterIdTicket(documento) {
     try {
         const response = await fetch(`${apiURL}/get_idTicket?documento=${documento}`);
         const data = await response.json();
         console.log('ID do Ticket obtido:', data.idTicket);
-        return data.idTicket; // Retorna o `idTicket` para ser usado na função scrapeAndSendData
+        return data.idTicket;
     } catch (error) {
         console.error('Erro ao obter idTicket:', error);
     }
 }
 
 // Função principal que faz o scrape da página e envia os dados para a API
-async function scrapeAndSendData() {
-    
-    const tables = document.querySelectorAll('.table-striped');
-    const dataTables = {};
+async function scrapeAndSendData(idTicket) {
+	const tables = document.querySelectorAll('.table-striped');
+	const debtsByTable = {};
 
-    // Processar as tabelas específicas
-    tables.forEach(table => {
-        const tableName = table.querySelector('thead td')?.textContent.trim();
-        if (tableName && !tableName.includes("DADOS BASICOS") && !tableName.includes("ALERTAS")) {
-            dataTables[tableName] = extractTableData(table, tableName);
-        }
-    });
+	tables.forEach(table => {
+			const tableNameElement = table.querySelector('thead td') || table.querySelector('thead th');
+			const tableName = tableNameElement?.textContent.trim();
+			if (tableName && !tableName.includes("DADOS BASICOS") && !tableName.includes("ALERTAS")) {
+					const debts = extractTableData(table, tableName);
+					if (debts.length > 0) {
+							debtsByTable[tableName] = debts;
+					}
+			}
+	});
 
-    documento = getHeaderData().CPF;
-    idTicket = await obterIdTicket(documento);
+	// Calcular o total
+	const totalDebt = Object.values(debtsByTable).flat().reduce((sum, debt) => sum + (debt.valor || 0), 0).toFixed(2);
 
-    console.log(`idTicket: ${idTicket}`)
+	// Obter dados do cabeçalho
+	const headerData = getHeaderData();
+	documento = headerData.CPF;
 
-    const nomeCliente = getHeaderData()["Nome do Cliente"];
-    const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
+	const nomeCliente = headerData["Nome do Cliente"] || 'Cliente';
+	const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
 
-    // Verifique se os dados estão corretos no console
-    console.log("Dados enviados:", {
-        header: getHeaderData(),
-        data: dataTables
-    });
+	// Verificar se os dados estão corretos no console
+	console.log("Dados enviados:", {
+			header: headerData,
+			data: debtsByTable,
+			divida: parseFloat(totalDebt)
+	});
 
-    // Formatar os dados para a API
-    const formattedData = {
-        header: getHeaderData(),
-        data: dataTables
-    };
+	// Formatar os dados para a API
+	const formattedData = {
+			header: headerData,
+			data: debtsByTable,
+			divida: parseFloat(totalDebt)
+	};
 
-    // Gera a URL com os parâmetros de query para gerar o PDF
-    const pdfUrl = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+	// Gera a URL com os parâmetros de query para gerar o PDF
+	const pdfUrl = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
 
-    // Envia os dados para gerar o PDF
-    fetch(pdfUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(formattedData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error("Falha ao gerar o PDF: " + response.statusText);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log("PDF gerado e salvo com sucesso.", data);
+	// Envia os dados para gerar o PDF
+	fetch(pdfUrl, {
+			method: "POST",
+			headers: {
+					"Content-Type": "application/json"
+			},
+			body: JSON.stringify(formattedData)
+	})
+	.then(response => {
+			if (!response.ok) {
+					throw new Error("Falha ao gerar o PDF: " + response.statusText);
+			}
+			return response.json();
+	})
+	.then(data => {
+			console.log("PDF gerado e salvo com sucesso.", data);
 
-        // Exemplo: Após gerar o PDF, você pode atualizar o status da consulta
-        updateStatus(idTicket, 3, 'console_bot'); // Atualiza o status para 'concluído' ou outro
-    })
-    .catch(error => {
-        console.error("Erro ao gerar o PDF:", error)
-        updateStatus(idTicket, 4, 'console_bot');
-    });
-    
+			// Atualiza o status para 'concluído'
+			updateStatus(idTicket, 3, 'console_bot');
+	})
+	.catch(error => {
+			console.error("Erro ao gerar o PDF:", error);
+			updateStatus(idTicket, 4, 'console_bot');
+	});
 }
 
-// Chame a função scrapeAndSendData para capturar os dados e enviar para a API
-scrapeAndSendData();
+
+
+async function updateStatus(id_ticket, status, bot) {
+	const url = `${apiURL}/update_status_por_cpf`;
+
+	try {
+		const response = await fetch(url, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				id_ticket: id_ticket,
+				status: status,
+				bot: bot,
+			}),
+		});
+
+		const data = await response.json();
+
+		console.log(`Status do documento ${documento} atualizado para ${status}:`, data);
+	} catch (error) {
+		console.error(`Erro ao atualizar status do documento ${documento}:`, error);
+	}
+}
+
+
+async function processarCPFsDisponiveis() {
+	const cpfs = await getCPFsDisponiveis();
+	
+  for (const cpf of cpfs) {
+		const idTicket = await obterIdTicket(cpf);
+		console.log(`idTicket: ${idTicket}`);
+    try {
+      // Inicia o processo de consulta para o CPF atual
+      await iniciarProcessoConsulta(idTicket, cpf);
+
+    } catch (error) {
+      console.error(`Erro ao processar CPF ${cpf}:`, error);
+
+      // Atualiza o status para 'erro' (status 4)
+      await updateStatus(cpf, 4, 'console_bot');
+    }
+  }
+}
+
+
+async function iniciarProcessoConsulta(idTicket, cpf) {
+    try {
+        console.log(`Iniciando processo para o CPF: ${cpf}`);
+
+        // Atualiza o status para 'em processamento' (status 2)
+        await updateStatus(idTicket, 2, 'console_bot');
+
+        // Preenche o campo de CPF
+        document.getElementById('cpf').value = cpf;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1s
+
+        // Chama a função enviarFormulario sem parâmetros
+        enviarFormulario(cpf);
+
+				await new Promise(resolve => setTimeout(resolve, 5000)); // Aguarda 1s
+
+        // Espera a página carregar ou o botão estar habilitado
+        while (document.getElementById('btn-consulta-cpf').disabled) {
+            await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100ms antes de verificar novamente
+        }
+
+        // Executar o script de extração de dados
+        await scrapeAndSendData(idTicket);
+
+        // Atualiza o status para 'concluído' (status 3)
+        await updateStatus(idTicket, 3, 'console_bot');
+
+        console.log(`Processo concluído para o CPF: ${cpf}`);
+    } catch (error) {
+        console.error(`Erro ao processar CPF ${cpf}:`, error);
+
+        // Atualiza o status para 'erro' (status 4)
+        await updateStatus(cpf, 4, 'console_bot');
+    }
+}
+
+
+async function getCPFsDisponiveis() {
+    try {
+        const response = await fetch(`${apiURL}/get_cpfs`);
+        console.log('Resposta do fetch:', response);
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+
+        // Verifica se data é um array ou um objeto
+        if (Array.isArray(data)) {
+            return data; // Se for um array de CPFs
+        } else if (data.cpfList) {
+            return data.cpfList; // Se for um objeto com cpfList
+        } else {
+            console.error('Formato de resposta inesperado:', data);
+            return [];
+        }
+    } catch (error) {
+        console.error('Erro ao obter CPFs disponíveis:', error);
+        return [];
+    }
+}
+
+async function testarGetCPFsDisponiveis() {
+    const cpfs = await getCPFsDisponiveis();
+    console.log('CPFs disponíveis:', cpfs);
+}
+

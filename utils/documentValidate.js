@@ -107,7 +107,7 @@ export function calculateTotalDebt(data) {
 
     if (!data || typeof data !== 'object') {
         console.warn("Formato de dados inválido para cálculo de dívida.");
-        return "0.00";
+        return 0; // Retorna zero como número
     }
 
     Object.keys(data).forEach(table => {
@@ -119,12 +119,12 @@ export function calculateTotalDebt(data) {
 
         entries.forEach(entry => {
             let { data: date, valor: value } = entry;
-            
+
             // Verificar se o valor é uma string antes de usar replace()
             if (typeof value === 'string') {
                 value = value.replace('R$', '').replace('.', '').replace(',', '.').trim();
             }
-            
+
             const valueNumeric = parseFloat(value);
 
             if (date && !isNaN(valueNumeric)) {
@@ -139,6 +139,7 @@ export function calculateTotalDebt(data) {
         totalDebt += debt.value;
     });
 
-    return totalDebt.toFixed(2);
+    return totalDebt; // Retorna o total como número
 }
+
 
