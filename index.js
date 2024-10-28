@@ -116,7 +116,7 @@ function generateHTML(dataMap) {
   const totalDebtHtml = `
       <tr>
           <th>Total da Dívida:</th>
-          <td>R$ ${totalDebtFormatted}</td>
+          <td>${dataMap.divida === 0 ? 'Nenhuma dívida encontrada.' : `R$ ${totalDebtFormatted}`}</td>
       </tr>
   `;
 
@@ -150,8 +150,8 @@ function generateHTML(dataMap) {
     }).join('');
 
     return `
-      <h2>${tableName}</h2>
-      <table>
+      <h5 class="p-2 bg-head mt-4 mb-0">${tableName}</h5>
+      <table class="table table-striped table-hover border">
         <thead>
           <tr>
             ${tableHeaders}
@@ -172,53 +172,31 @@ function generateHTML(dataMap) {
       <meta charset="UTF-8">
       <title>Relatório de Dívidas</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
-          font-size: 12px;
-          margin: 20px;
-          color: #333;
+        .bg-head {
+            color: #fff !important;
+            background-color: #10163a !important;
+            border-color: #10163a !important;
         }
-        h1 {
-          text-align: center;
-          color: #333;
-          font-size: 24px;
-          margin-bottom: 30px;
-        }
-        h2 {
-          margin-top: 40px;
-          color: #333;
-          font-size: 20px;
-          border-bottom: 2px solid #4CAF50;
-          padding-bottom: 5px;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 25px;
-        }
-        table th, table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-        }
-        table th {
-          background-color: #4CAF50;
-          color: white;
-          font-weight: bold;
-          text-align: center;
-        }
-        table td {
-          text-align: center;
-        }
-        table tr:nth-child(even) {
-          background-color: #f2f2f2;
+        td{
+            font-size: 14px;
         }
       </style>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     </head>
     <body>
-      <h1>Relatório de Dívidas</h1>
-      <table>
+      <div class="nav-align-top m-4">
+      <div class="bg-white" style="align-self: center;">
+        <div class="row">
+                   <div class="col d-flex justify-content-start">
+                       <img src="https://marcaspelomundo.com.br/wp-content/uploads/2021/03/Ref-Serasa.png" alt="Logo Serasa" style="width:200px;">
+                   </div>
+                   <div class="col d-flex justify-content-end">
+                       <img src="https://aciav.org.br/wp-content/uploads/2020/01/logo-boa-vista-scpc.png" alt="Logo Boa Vista SCPC" style="width:200px;">
+                   </div>
+               </div> 
+           <table class="table table-striped table-hover mt-4 border">
         <thead>
-          <tr><th colspan="2">DADOS BÁSICOS</th></tr>
+          <tr><th colspan="2" class="bg-head">DADOS BÁSICOS</th></tr>
         </thead>
         <tbody>
           ${headerHtml}
@@ -226,6 +204,7 @@ function generateHTML(dataMap) {
         </tbody>
       </table>
       ${debtsTablesHtml}
+      </div>
     </body>
     </html>
   `;
@@ -999,7 +978,7 @@ gi
  */
 app.get('/get_cpfs', (req, res) => {
 
-  const query = `SELECT REPLACE(REPLACE(documento,'.',''),'-','') AS documento FROM tbconsultas WHERE status_id = 1 and LENGTH (DOCUMENTO) = 14 limit 1`;
+  const query = `SELECT REPLACE(REPLACE(documento,'.',''),'-','') AS documento FROM tbconsultas WHERE status_id in (1,4) and LENGTH (DOCUMENTO) = 14 limit 1`;
 
   connection.query(query, (err, results) => {
       if (err) {

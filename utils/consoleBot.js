@@ -1,4 +1,4 @@
-// const apiURL = 'https://drlimpanome.site'
+//  const apiURL = 'https://drlimpanome.site'
 const apiURL = 'http://localhost:80';
 let documento;
 
@@ -258,7 +258,11 @@ async function updateStatus(id_ticket, status, bot) {
 
 async function processarCPFsDisponiveis() {
 	const cpfs = await getCPFsDisponiveis();
-	
+	if (cpfs.length === 0) {
+		console.log("Nenhum CPF pendente encontrado.");
+		return;
+	}
+
   for (const cpf of cpfs) {
 		const idTicket = await obterIdTicket(cpf);
 		console.log(`idTicket: ${idTicket}`);
