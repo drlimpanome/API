@@ -652,9 +652,8 @@ app.post("/askCpf/:id", async (req, res) => {
     await createConsulta(validationResult.document, idTicket, res);
     
     try {
-      const { status, pdfUrl, totalDebt } = await consultDocument(
-        document, idTicket
-      );
+      const response = await consultDocument(document, idTicket);
+      const { status, pdfUrl, totalDebt } = response;
       return res.status(200).json({ message: "Updated successfully" });
     } catch (error) {
       console.log(error);
