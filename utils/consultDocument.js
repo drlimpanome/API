@@ -234,11 +234,12 @@ async function scrapeAndSendData(html,idTicket) {
 	};
 
 	// Gera a URL com os parâmetros de query para gerar o PDF
-	const pdfUrl = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+	const pdfGenerate = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+	const pdfUrl = `${apiURL}/download/${encodeURIComponent(fileName)}`;
 
 	// Envia os dados para gerar o PDF
 	try {
-		const response = await fetch(pdfUrl, {
+		const response = await fetch(pdfGenerate, {
 			method: "POST",
 			headers: {
 					"Content-Type": "application/json"
