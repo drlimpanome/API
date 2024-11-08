@@ -650,7 +650,24 @@ app.post("/askCpf/:id", async (req, res) => {
       return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
     }
     await createConsulta(validationResult.document, idTicket, res);
-    return res.status(200).json({ message: "Updated successfully" });
+    
+    try {
+      const { status, pdfUrl, totalDebt } = await consultDocument(
+        document, idTicket
+      );
+      return res.status(200).json({
+        status,
+        pdfUrl,
+        totalDebt,
+      });
+    } catch (error) {
+      console.log(error);
+      console.error("Erro ao consultar o documento:", error.message);
+      return res.status(400).json({
+        status: "error",
+        message: "Ocorreu um erro ao consultar o documento.",
+      });
+    }
     // Explicitly indicate that response handling is complete
   } catch (e) {
     return res.status(400).json({ message: e.message });
