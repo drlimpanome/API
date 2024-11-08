@@ -183,7 +183,7 @@ function generateHTML(dataMap) {
       </style>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     </head>
-    <body>
+    <body style="zoom: 0.75;">
       <div class="nav-align-top m-4">
       <div class="bg-white" style="align-self: center;">
         <div class="row">
@@ -315,46 +315,13 @@ app.post("/consultDocument/:id", async (req, res) => {
   const idTicket = req.params.id;
 
   try {
-    const { status, data, pdfUrl, clientName } = await consultDocument(
-      numeroDocumento
+    const { status, pdfUrl, totalDebt } = await consultDocument(
+      numeroDocumento, idTicket
     );
-    const filteredData = filterRelevantData(data);
-    const totalDebt = calculateTotalDebt(filteredData);
-
-    if (pdfUrl) {
-      try {
-        const buffer = await downloadpdf(pdfUrl);
-        const sanitizedClientName = clientName.replace(/ /g, "_"); // Replace spaces with underscores
-        const fileName = `${sanitizedClientName}_${numeroDocumento.replace(
-          /[^\d]/g,
-          ""
-        )}.pdf`;
-        const filePath = path.join(__dirname, "pdfs", fileName);
-
-        fs.writeFileSync(filePath, buffer, "base64");
-        console.log("PDF downloaded and saved:", filePath);
-
-        await Consultas.update(
-          {
-            url: fileName,
-            divida: totalDebt,
-            status_id: 3,
-          },
-          { where: { id_ticket: idTicket } }
-        );
-      } catch (error) {
-        return res.status(400).json({
-          status: "error",
-          message: "Erro ao baixar o PDF: " + error.message,
-        });
-      }
-    }
-
     return res.status(200).json({
       status,
+      pdfUrl,
       totalDebt,
-      data: filteredData,
-      pdfUrl: `${clientName}_${numeroDocumento.replace(/[^\d]/g, "")}.pdf`,
     });
   } catch (error) {
     console.log(error);

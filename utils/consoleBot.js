@@ -1,5 +1,5 @@
-//  const apiURL = 'https://drlimpanome.site'
-const apiURL = 'http://localhost:80';
+ const apiURL = 'https://drlimpanome.site'
+// const apiURL = 'http://localhost:80';
 let documento;
 
 // Função para extrair o texto de uma célula
@@ -148,18 +148,6 @@ function extractTableData(table, tableName) {
     return debts;
 }
 
-// Função para obter o idTicket
-async function obterIdTicket(documento) {
-    try {
-        const response = await fetch(`${apiURL}/get_idTicket?documento=${documento}`);
-        const data = await response.json();
-        console.log('ID do Ticket obtido:', data.idTicket);
-        return data.idTicket;
-    } catch (error) {
-        console.error('Erro ao obter idTicket:', error);
-    }
-}
-
 // Função principal que faz o scrape da página e envia os dados para a API
 async function scrapeAndSendData(idTicket) {
 	const tables = document.querySelectorAll('.table-striped');
@@ -230,6 +218,93 @@ async function scrapeAndSendData(idTicket) {
 }
 
 
+async function processarCPFsDisponiveis() {
+	const cpfs = await getCPFsDisponiveis();
+	
+	if (cpfs.length === 0) {
+		console.log("Nenhum CPF pendente encontrado.");
+	}else{
+		for (const cpf of cpfs) {
+			const idTicket = await obterIdTicket(cpf);
+			console.log(`idTicket: ${idTicket}`);
+			try {
+				// Inicia o processo de consulta para o CPF atual
+				await iniciarProcessoConsulta(idTicket, cpf);
+	
+			} catch (error) {
+				console.error(`Erro ao processar CPF ${cpf}:`, error);
+	
+				// Atualiza o status para 'erro' (status 4)
+				await updateStatus(cpf, 4, 'console_bot');
+			}
+		}
+	}
+	
+	setTimeout(processarCPFsDisponiveis, 120000);
+	return;
+}
+
+async function iniciarProcessoConsulta(idTicket, cpf) {
+	try {
+		console.log(`Iniciando processo para o CPF: ${cpf}`);
+
+		// Atualiza o status para 'em processamento' (status 2)
+		await updateStatus(idTicket, 2, 'console_bot');
+
+		// Preenche o campo de CPF
+		document.getElementById('cpf').value = cpf;
+		await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1s
+
+		// Chama a função enviarFormulario sem parâmetros
+		let verifyCaptcha = false
+		verifyCaptcha = await captchaRequest(cpf);
+
+		if (!verifyCaptcha) {
+			let tentativas = 0;
+			while (tentativas < 3 && !verifyCaptcha) {
+				console.log(`Tentativa ${tentativas + 1} de 3`);
+				await new Promise(resolve => setTimeout(resolve, 60000)); // Aguarda 60s
+				verifyCaptcha = await captchaRequest(cpf);
+				tentativas++;
+			}
+			if (!verifyCaptcha) {
+				throw new Error('Erro ao verificar captcha');
+			}
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 5000)); // Aguarda 1s
+
+		// Espera a página carregar ou o botão estar habilitado
+		while (document.getElementById('btn-consulta-cpf').disabled) {
+				await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100ms antes de verificar novamente
+		}
+
+		// Executar o script de extração de dados
+		await scrapeAndSendData(idTicket);
+
+		// Atualiza o status para 'concluído' (status 3)
+		await updateStatus(idTicket, 3, 'console_bot');
+
+		console.log(`Processo concluído para o CPF: ${cpf}`);
+	} catch (error) {
+		console.error(`Erro ao processar CPF ${cpf}:`, error);
+
+		// Atualiza o status para 'erro' (status 4)
+		await updateStatus(cpf, 4, 'console_bot');
+	}
+}
+
+// Função para obter o idTicket
+async function obterIdTicket(documento) {
+	try {
+			const response = await fetch(`${apiURL}/get_idTicket?documento=${documento}`);
+			const data = await response.json();
+			console.log('ID do Ticket obtido:', data.idTicket);
+			return data.idTicket;
+	} catch (error) {
+			console.error('Erro ao obter idTicket:', error);
+	}
+}
 
 async function updateStatus(id_ticket, status, bot) {
 	const url = `${apiURL}/update_status_por_cpf`;
@@ -255,68 +330,6 @@ async function updateStatus(id_ticket, status, bot) {
 	}
 }
 
-
-async function processarCPFsDisponiveis() {
-	const cpfs = await getCPFsDisponiveis();
-	if (cpfs.length === 0) {
-		console.log("Nenhum CPF pendente encontrado.");
-		return;
-	}
-
-  for (const cpf of cpfs) {
-		const idTicket = await obterIdTicket(cpf);
-		console.log(`idTicket: ${idTicket}`);
-    try {
-      // Inicia o processo de consulta para o CPF atual
-      await iniciarProcessoConsulta(idTicket, cpf);
-
-    } catch (error) {
-      console.error(`Erro ao processar CPF ${cpf}:`, error);
-
-      // Atualiza o status para 'erro' (status 4)
-      await updateStatus(cpf, 4, 'console_bot');
-    }
-  }
-}
-
-
-async function iniciarProcessoConsulta(idTicket, cpf) {
-    try {
-        console.log(`Iniciando processo para o CPF: ${cpf}`);
-
-        // Atualiza o status para 'em processamento' (status 2)
-        await updateStatus(idTicket, 2, 'console_bot');
-
-        // Preenche o campo de CPF
-        document.getElementById('cpf').value = cpf;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1s
-
-        // Chama a função enviarFormulario sem parâmetros
-        enviarFormulario(cpf);
-
-				await new Promise(resolve => setTimeout(resolve, 5000)); // Aguarda 1s
-
-        // Espera a página carregar ou o botão estar habilitado
-        while (document.getElementById('btn-consulta-cpf').disabled) {
-            await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100ms antes de verificar novamente
-        }
-
-        // Executar o script de extração de dados
-        await scrapeAndSendData(idTicket);
-
-        // Atualiza o status para 'concluído' (status 3)
-        await updateStatus(idTicket, 3, 'console_bot');
-
-        console.log(`Processo concluído para o CPF: ${cpf}`);
-    } catch (error) {
-        console.error(`Erro ao processar CPF ${cpf}:`, error);
-
-        // Atualiza o status para 'erro' (status 4)
-        await updateStatus(cpf, 4, 'console_bot');
-    }
-}
-
-
 async function getCPFsDisponiveis() {
     try {
         const response = await fetch(`${apiURL}/get_cpfs`);
@@ -339,8 +352,20 @@ async function getCPFsDisponiveis() {
     }
 }
 
-async function testarGetCPFsDisponiveis() {
-    const cpfs = await getCPFsDisponiveis();
-    console.log('CPFs disponíveis:', cpfs);
+
+async function captchaRequest(campo) {
+
+	var captchaResponse = await turnstile.getResponse();
+
+	if (captchaResponse) {
+		requestConsulta('/bases/consulta/82', campo, 'cpf', captchaResponse);
+		turnstile.reset();
+		return true;
+	} else {
+		turnstile.reset();
+		return false;
+	}
+
 }
+
 

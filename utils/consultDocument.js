@@ -7,7 +7,57 @@ import mysql from 'mysql';
 import { JSDOM } from 'jsdom';
 dotenv.config();
 
+// const apiURL = 'https://drlimpanome.site'
+ const apiURL = 'http://localhost:80';
 
+let documento;
+
+// Função para extrair o texto de uma célula
+function getTextFromCell(cell) {
+    return cell.textContent.trim();
+}
+
+// Função para extrair dados básicos do cabeçalho
+function getHeaderData(table) {
+    const headerMap = {};
+
+            const key = table.querySelector("tbody tr th").textContent.trim();
+            const value = table.querySelector("tbody tr td").textContent.trim();
+            if (key && value) {
+                headerMap[key] = value;
+            }
+
+    return headerMap;
+}
+
+// Mapeamento dos campos por tabela
+const tableColumnMappings = {
+	'Refin Pefin': {
+			data: ['data'],
+			tipo: ['tipo'],
+			valor: ['valor'],
+			contrato: ['contrato'],
+			origem: ['Oorigem'],
+			empresa: ['empresa']
+	},
+	'Crédito': {
+			data: ['data'],
+			tipo: ['tipo'],
+			nome: ['nome'],
+			valor: ['valor'],
+			cidade: ['cidade'],
+			uf: ['uf'],
+			dataDisponivel: ['Data Disponível'],
+	},
+	'Protestos': {
+			data: ['data'],
+			valor: ['valor'],
+			cartorio: ['cartório'],
+			cidade: ['cidade'],
+			uf: ['uf']
+	},
+    // Adicione outros mapeamentos conforme necessário
+};
 
 // Configuração de conexão com o banco de dados
 const connection = mysql.createConnection({
@@ -18,37 +68,222 @@ const connection = mysql.createConnection({
 });
 
 
-export async function consultDocument(numeroDocumento) {
+export async function consultDocument(numeroDocumento, idTicket) {
     const validationResult = validateDocument(numeroDocumento);
     console.log(validationResult, numeroDocumento)
     if (!validationResult.isValid) {
         throw new Error(`Erro ao consultar o documento: documento invalido`);
     }
-    const tk = await getConfereTK()
+    // const tk = await getConfereTK()
+    const tk = 'L26A-KEG-3938471-W4J-4308'
     if (!tk) {
         throw Error('Ocorreu um erro ao obter token')
     }
-    const apiUrl = `https://confere.link/app/?acao=CONS_SERA_${validationResult.type}&dado=${numeroDocumento}&tk=${tk}`;
+    const apiUrl = `https://confere.link/api/?acao=DIVIDAS_${validationResult.type}&dado=${numeroDocumento}&tk=${tk}`;
+
+    console.log(apiUrl);
 
     try {
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8'
+            }
+        });
         if (!response.ok) {
             throw new Error(`Erro ao consultar o documento: ${response.statusText}`);
         }
-        console.log(response)
-        const html = await response.text();
-        console.log(html)
-        const { status, data, pdfUrl, clientName } = recuperarDados(html);
+        const buffer = await response.arrayBuffer();
+        const decoder = new TextDecoder('utf-8');
+        const html = decoder.decode(buffer);
+        
+        const { status, pdfUrl, totalDebt } =  await scrapeAndSendData(html, idTicket);
         if (!pdfUrl) {
             throw new Error('Ocorreu um erro ao consultar o documento. Url do pdf nao foi encontrado');
         }
-        console.log(status, data, pdfUrl, clientName)
-        return { status, data, pdfUrl, clientName };
+        return { status, pdfUrl, totalDebt };
     } catch (error) {
         console.log(error.message)
         console.error('Erro ao consultar o documento:', error.message);
         throw new Error('Ocorreu um erro ao consultar o documento.');
     }
+}
+
+
+function extractTableData(table, tableName) {
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+    // Encontrar o índice da linha de cabeçalho
+    let headerRowIndex = 0;
+
+    if (!rows[0]) {
+        // Não encontrou o cabeçalho, não processa esta tabela
+        return [];
+    }
+
+    const headerRow = Array.from(table.querySelectorAll('thead tr'))[headerRowIndex];
+    const dataRows = rows.slice(headerRowIndex + 1);
+
+    // **Ajuste aqui**: Verificar se a tabela não possui dados
+    // const noDataRow = dataRows.find(row => row.classList.contains('text-danger'));
+    // if (noDataRow) {
+    //     // Tabela sem dados, retorna array vazio
+    //     return [];
+    // }
+
+    // Obter os nomes das colunas
+    const headerCells = Array.from(headerRow.querySelectorAll('th')).map(getTextFromCell);
+    const headers = headerCells.map(header => header.toLowerCase().trim());
+
+    // Mapear índices com base no nome das colunas
+    const columnIndices = {};
+    headers.forEach((header, index) => {
+        columnIndices[header] = index;
+    });
+
+    // tableName = tableName.replace('Cr�dito', 'Crédito');
+    const mapping = tableColumnMappings[tableName];
+
+    if (!mapping) {
+        // Não há mapeamento para esta tabela, pula
+        return [];
+    }
+
+    const debts = [];
+
+    dataRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(getTextFromCell);
+
+        // Criar um objeto de dívida
+        const debtEntry = {};
+
+        Object.keys(mapping).forEach(field => {
+            const possibleHeaders = mapping[field];
+            let value = '';
+            for (let header of possibleHeaders) {
+                const index = columnIndices[header.toLowerCase()];
+                if (index !== undefined) {
+                    value = cells[index];
+                    break;
+                }
+            }
+            if (field === 'valor') {
+                value = value ? parseFloat(value.replace(/[^\d.,-]/g, '').replace('.', '').replace(',', '.').replace('r$', '').trim()) : null;
+                // Arredondar para duas casas decimais
+                value = value ? parseFloat(value.toFixed(2)) : null;
+            }
+            debtEntry[field] = value || '';
+        });
+
+        debts.push(debtEntry);
+    });
+
+    return debts;
+}
+
+// Função principal que faz o scrape da página e envia os dados para a API
+async function scrapeAndSendData(html,idTicket) {
+	const dom = new JSDOM(html);
+    const document = dom.window.document;
+    const tables = document.querySelectorAll('table');
+	const debtsByTable = {};
+    const headerData = {};
+
+	tables.forEach(table => {
+			const tableNameElement = table.previousElementSibling;
+			const tableName = tableNameElement?.textContent.trim();
+			if (tableName) {
+                if (!tableName.includes("Dados Gerais")){
+                    const debts = extractTableData(table, tableName);
+                    if (debts.length > 0) {
+                            debtsByTable[tableName] = debts;
+                    }
+                }else{
+                    table.querySelectorAll("tbody tr").forEach((row) => {
+                        const key = row.querySelector("th").textContent.trim();
+                        const value = row.querySelector("td").textContent.trim();
+                        if (["Nome", "Documento", "Data"].includes(key) && value) {
+                            headerData[key] = value;
+                        }
+                });
+                }
+			}
+	});
+
+	// Calcular o total
+	const totalDebt = parseFloat(Object.values(debtsByTable).flat().reduce((sum, debt) => sum + (debt.valor || 0), 0).toFixed(2));
+
+	// Obter dados do cabeçalho
+	
+	documento = headerData.Documento;
+
+	const nomeCliente = headerData["Nome"] || 'Cliente';
+	const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
+
+	// Verificar se os dados estão corretos no console
+	console.log("Dados enviados:", {
+			header: headerData,
+			data: debtsByTable,
+			divida: totalDebt
+	});
+
+	// Formatar os dados para a API
+	const formattedData = {
+			header: headerData,
+			data: debtsByTable,
+			divida: totalDebt
+	};
+
+	// Gera a URL com os parâmetros de query para gerar o PDF
+	const pdfUrl = `${apiURL}/generate-pdf?idTicket=${idTicket}&fileName=${encodeURIComponent(fileName)}`;
+
+	// Envia os dados para gerar o PDF
+	try {
+		const response = await fetch(pdfUrl, {
+			method: "POST",
+			headers: {
+					"Content-Type": "application/json"
+			},
+			body: JSON.stringify(formattedData)
+		});
+
+		if (!response.ok) {
+			throw new Error("Falha ao gerar o PDF: " + response.statusText);
+		}
+
+		const data = await response.json();
+		console.log("PDF gerado e salvo com sucesso.", data);
+
+		// Atualiza o status para 'concluído'
+		updateStatus(idTicket, 3, 'confere_api');
+		return { status: 3, pdfUrl, totalDebt };
+	} catch (error) {
+		console.error("Erro ao gerar o PDF:", error);
+		updateStatus(idTicket, 4, 'confere_api');
+	}
+}
+
+async function updateStatus(id_ticket, status, bot) {
+	const url = `${apiURL}/update_status_por_cpf`;
+
+	try {
+		const response = await fetch(url, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				id_ticket: id_ticket,
+				status: status,
+				bot: bot,
+			}),
+		});
+
+		const data = await response.json();
+
+		console.log(`Status do documento ${documento} atualizado para ${status}:`, data);
+	} catch (error) {
+		console.error(`Erro ao atualizar status do documento ${documento}:`, error);
+	}
 }
 
 export function recuperarDados(html) {
