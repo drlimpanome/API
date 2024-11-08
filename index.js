@@ -655,11 +655,6 @@ app.post("/askCpf/:id", async (req, res) => {
       const { status, pdfUrl, totalDebt } = await consultDocument(
         documento, idTicket
       );
-      // return res.status(200).json({
-      //   status,
-      //   pdfUrl,
-      //   totalDebt,
-      // });
       return res.status(200).json({ message: "Updated successfully" });
     } catch (error) {
       console.log(error);
