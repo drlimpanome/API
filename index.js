@@ -640,21 +640,26 @@ app.post("/askCpf/:id", async (req, res) => {
     const idTicket = req.params.id;
 
     // Documento (CPF ou CNPJ) recebido da solicitação
-    const { documento } = req.body;
-    console.log(documento);
+    const { document } = req.body;
+    console.log(document);
 
     // Validação do documento (CPF ou CNPJ)
-    const validationResult = validateDocument(documento);
+    const validationResult = validateDocument(document);
     if (!validationResult.isValid) {
       console.log("invalid_document");
       return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
     }
-    await createConsulta(validationResult.documento, idTicket, res);
+    await createConsulta(validationResult.document, idTicket, res);
     
     try {
       const { status, pdfUrl, totalDebt } = await consultDocument(
-        documento, idTicket
+        document, idTicket
       );
+      // return res.status(200).json({
+      //   status,
+      //   pdfUrl,
+      //   totalDebt,
+      // });
       return res.status(200).json({ message: "Updated successfully" });
     } catch (error) {
       console.log(error);
