@@ -7,8 +7,8 @@ import mysql from 'mysql';
 import { JSDOM } from 'jsdom';
 dotenv.config();
 
- const apiURL = 'https://drlimpanome.site'
-// const apiURL = 'http://localhost:80';
+//  const apiURL = 'https://drlimpanome.site'
+const apiURL = 'http://localhost:80';
 
 let documento;
 
@@ -121,7 +121,7 @@ function extractTableData(table, tableName) {
     }
 
     const headerRow = Array.from(table.querySelectorAll('thead tr'))[headerRowIndex];
-    const dataRows = rows.slice(headerRowIndex + 1);
+    const dataRows = rows.slice(headerRowIndex);
 
     // **Ajuste aqui**: Verificar se a tabela não possui dados
     // const noDataRow = dataRows.find(row => row.classList.contains('text-danger'));
