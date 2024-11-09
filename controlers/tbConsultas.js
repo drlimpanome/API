@@ -4,22 +4,16 @@ import Ticket from '../models/TbTIcket.js';
 
 export async function createConsulta(document, id, res) {
     try {
-        console.log("Checking existence with ID:", id);
-        const thereisone = await TbConsultas.findOne({ where: { id_ticket: id } });
-        console.log("Found:", thereisone);
+        const ticket = await Ticket.findOne({ where: { id_ticket: id } });
 
-        if (!thereisone) {
+        if (!ticket) {
             throw new Error('No such ticket exists');
         }
 
-        console.log("Attempting to update document:", document);
-        const newConsulta = await TbConsultas.update({ documento: document, status_id: 1 }, { where: { id_ticket: id } });
-        await Ticket.update({ cpf: document }, { where: { id_ticket: id } });
+        await ticket.update({ cpf: document });
+        await TbConsultas.update({ documento: document, status_id: 1 }, { where: { id_ticket: id } });
 
-        if (newConsulta[0] === 0) {
-            throw new Error('No ticket updated'); // Better error handling
-        }
-        return newConsulta;
+        return true;
     } catch (error) {
         console.error("Error in createConsulta:", error);
         throw error;
