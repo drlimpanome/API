@@ -112,7 +112,7 @@ function generateHTML(dataMap) {
   `).join('');
 
   // Adicionar o total da dívida no cabeçalho
-  const totalDebtFormatted = parseFloat(dataMap.divida).toFixed(2).replace('.', ',');
+  const totalDebtFormatted = parseFloat(dataMap.divida).toFixed(2).replace('.', ',').toLocaleString('pt-BR');
   const totalDebtHtml = `
       <tr>
           <th>Total da Dívida:</th>
@@ -142,7 +142,7 @@ function generateHTML(dataMap) {
       const debtValues = Array.from(allFields).map(key => {
         let value = debt[key] || '';
         if (key === 'valor' && value) {
-          value = `R$ ${parseFloat(value).toFixed(2).replace('.', ',')}`;
+          value = `R$ ${parseFloat(value).toFixed(2).replace('.', ',').toLocaleString('pt-BR')}`;
         }
         return `<td>${value}</td>`;
       }).join('');
