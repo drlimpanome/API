@@ -49,6 +49,15 @@ const tableColumnMappings = {
 			uf: ['uf'],
 			dataDisponivel: ['Data Disponível'],
 	},
+	'Cr�dito': {
+			data: ['data'],
+			tipo: ['tipo'],
+			nome: ['nome'],
+			valor: ['valor'],
+			cidade: ['cidade'],
+			uf: ['uf'],
+			dataDisponivel: ['Data Disponível'],
+	},
 	'Protestos': {
 			data: ['data'],
 			valor: ['valor'],
