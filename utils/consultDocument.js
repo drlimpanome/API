@@ -191,7 +191,7 @@ function extractTableData(table, tableName) {
 
 // Função principal que faz o scrape da página e envia os dados para a API
 async function scrapeAndSendData(html,idTicket) {
-	const dom = new JSDOM(html);
+	const dom = new JSDOM(html.replace('Cr�dito', 'Crédito'));
     const document = dom.window.document;
     const tables = document.querySelectorAll('table');
 	const debtsByTable = {};
@@ -218,8 +218,20 @@ async function scrapeAndSendData(html,idTicket) {
 			}
 	});
 
-	// Calcular o total
-	const totalDebt = parseFloat(Object.values(debtsByTable).flat().reduce((sum, debt) => sum + (debt.valor || 0), 0).toFixed(2));
+    // Agrupar todas as dívidas em um único array
+    const allDebts = Object.values(debtsByTable).flat();
+
+    // Remover duplicidades de todas as dívidas com base em 'data' e 'valor'
+    const uniqueDebts = allDebts.filter((debt, index, self) => {
+        return index === self.findIndex(d => (
+            d.data === debt.data && d.valor === debt.valor
+        ));
+    });
+
+    // Calcular o total das dívidas únicas
+    const totalDebt = parseFloat(
+        uniqueDebts.reduce((sum, debt) => sum + (debt.valor || 0), 0).toFixed(2)
+    );
 
 	// Obter dados do cabeçalho
 	
