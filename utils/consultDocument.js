@@ -7,8 +7,8 @@ import mysql from 'mysql';
 import { JSDOM } from 'jsdom';
 dotenv.config();
 
-const apiURL = 'https://drlimpanome.site'
-// const apiURL = 'http://localhost:80';
+// const apiURL = 'https://drlimpanome.site';
+const apiURL = 'http://localhost:80';
 
 let documento;
 
@@ -191,7 +191,7 @@ function extractTableData(table, tableName) {
 
 // Função principal que faz o scrape da página e envia os dados para a API
 async function scrapeAndSendData(html,idTicket) {
-	const dom = new JSDOM(html.replace('Cr�dito', 'Crédito'));
+	const dom = new JSDOM(html.replaceAll('Cr�dito', 'Crédito'));
     const document = dom.window.document;
     const tables = document.querySelectorAll('table');
 	const debtsByTable = {};
