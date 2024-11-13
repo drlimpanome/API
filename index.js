@@ -519,7 +519,7 @@ app.post("/ticketGenerate", (req, res) => {
   });
 });
 
-app.get("/verify", (req, res) => {
+app.get("/status", (req, res) => {
   res.json({ status: "online" });
 });
 
