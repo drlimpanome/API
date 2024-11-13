@@ -519,8 +519,8 @@ app.post("/ticketGenerate", (req, res) => {
   });
 });
 
-app.get("/online", (req, res) => {
-  res.send("ok");
+app.get("/verify", (req, res) => {
+  res.json({ status: "online" });
 });
 
 /**
