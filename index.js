@@ -519,6 +519,10 @@ app.post("/ticketGenerate", (req, res) => {
   });
 });
 
+app.get("/online", (req, res) => {
+  res.send("ok");
+});
+
 /**
  * @swagger
  * /download/{fileName}:
