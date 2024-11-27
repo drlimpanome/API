@@ -313,7 +313,7 @@ function isFileInUse(filePath) {
 app.post("/consultDocument/:id", async (req, res) => {
   const { numeroDocumento } = req.body;
   const idTicket = req.params.id;
-
+  
   try {
     const { status, pdfUrl, totalDebt } = await consultDocument(
       numeroDocumento, idTicket
@@ -655,18 +655,8 @@ app.post("/askCpf/:id", async (req, res) => {
     }
     await createConsulta(validationResult.document, idTicket, res);
     
-    try {
-      const response = await consultDocument(document, idTicket);
-      const { status, pdfUrl, totalDebt } = response;
-      return res.status(200).json({ message: "Updated successfully" });
-    } catch (error) {
-      console.log(error);
-      console.error("Erro ao consultar o documento:", error.message);
-      return res.status(400).json({
-        status: "error",
-        message: "Ocorreu um erro ao consultar o documento.",
-      });
-    }
+    return res.status(200).json({ message: "Updated successfully" });
+    
     // Explicitly indicate that response handling is complete
   } catch (e) {
     return res.status(400).json({ message: e.message });
