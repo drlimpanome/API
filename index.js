@@ -315,9 +315,8 @@ app.post("/consultDocument/:id", async (req, res) => {
   const idTicket = req.params.id;
   
   try {
-    const { status, pdfUrl, totalDebt } = await consultDocument(
-      numeroDocumento, idTicket
-    );
+    const response = await consultDocument(numeroDocumento, idTicket);
+    const { status, pdfUrl, totalDebt } = response;
     return res.status(200).json({
       status,
       pdfUrl,
