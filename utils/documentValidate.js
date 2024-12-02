@@ -1,21 +1,28 @@
 import fetch from "node-fetch";
 
 export function validateDocument(document) {
-    // Remove non-numeric characters
-    if (!document) return { type: 'Unknown', isValid: false };
+    // Verifica se o documento contém algum caractere não numérico (excluindo pontuação e espaços)
+    if (!document || /[a-zA-Z]/.test(document)) {
+        return { type: 'Unknown', isValid: false };
+    }
+
+    // Remove todos os caracteres não numéricos
     document = document.toString().replace(/[^\d]/g, '');
 
-    console.log(document)
-    if (document.length === 11) {
-        // If the length is 11 digits, it's a CPF
+    // Regex para CPF e CNPJ
+    const cpfRegex = /^\d{11}$/;
+    const cnpjRegex = /^\d{14}$/;
+
+    if (cpfRegex.test(document)) {
+        // Se corresponder ao regex de CPF, valida o CPF
         const isValid = validateCPF(document);
         return {
             type: 'CPF',
             isValid: isValid,
             document: isValid ? formatCPF(document) : document
         };
-    } else if (document.length === 14) {
-        // If the length is 14 digits, it's a CNPJ
+    } else if (cnpjRegex.test(document)) {
+        // Se corresponder ao regex de CNPJ, valida o CNPJ
         const isValid = validateCNPJ(document);
         return {
             type: 'CNPJ',
@@ -23,7 +30,7 @@ export function validateDocument(document) {
             document: isValid ? formatCNPJ(document) : document
         };
     } else {
-        // Otherwise, the document type is unknown
+        // Caso não corresponda a nenhum dos dois formatos, é um tipo desconhecido
         return { type: 'Unknown', isValid: false };
     }
 }
