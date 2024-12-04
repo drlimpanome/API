@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 export function validateDocument(document) {
     // Verifica se o documento contém algum caractere não numérico (excluindo pontuação e espaços)
-    if (!document || /[a-zA-Z]/.test(document)) {
+    if (!document || /[a-zA-Z]/.test(document) || /[\r\n]/.test(document)) {
         return { type: 'Unknown', isValid: false };
     }
 
