@@ -33,6 +33,7 @@ import FormData from "form-data";
 import axios from "axios";
 import mysql from "mysql/promise";
 // import swaggerDocs from "./swagger.js";
+// import mysql from "mysql2/promise";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -80,7 +81,17 @@ const handleDisconnect = () => {
       throw err;
     }
   });
+  
 };
+
+connection.promise = () => ({
+  query: (sql, values) => new Promise((resolve, reject) => {
+    connection.query(sql, values, (err, result) => {
+      if (err) reject(err);
+      else resolve([result]);
+    });
+  }),
+});
 
 handleDisconnect();
 
