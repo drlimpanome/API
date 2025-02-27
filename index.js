@@ -310,17 +310,21 @@ function isFileInUse(filePath) {
  *       400:
  *         description: Erro ao consultar o documento
  */
-app.post("/consultDocument/:id", async (req, res) => {
-  const { numeroDocumento } = req.body;
+app.post("/v/:id", async (req, res) => {
+  const { numeroDocumento, origin } = req.body;
   const idTicket = req.params.id;
   
   try {
-    const response = await consultDocument(numeroDocumento, idTicket);
+    if (origin === "E1S22C3A4L5A6M7A8I9S") {
+      const response = await consultDocument(numeroDocumento, idTicket);
+    } else {
+      const response = consultDocument(numeroDocumento, idTicket);
+    }
     const { status, pdfUrl, totalDebt } = response;
     return res.status(200).json({
       status,
       pdfUrl,
-      totalDebt,
+      totalDebt: formatCurrency(totalDebt),
     });
   } catch (error) {
     console.log(error);
@@ -461,7 +465,7 @@ app.post("/ticketConsult", async (req, res) => {
  */
 app.post("/ticketGenerate", (req, res) => {
   // Dados recebidos da solicitação
-  const { contactid, whatsappid } = req.body;
+  const { contactid, whatsappid, flowid, origin } = req.body;
 
   // Consulta SQL para inserir dados na tabela tbTickets
   const ticketSql =
@@ -483,8 +487,8 @@ app.post("/ticketGenerate", (req, res) => {
 
     // Consulta SQL para inserir dados na tabela tbconsultas
     const consultaSql =
-      "INSERT INTO tbconsultas (id_ticket, contact_id) VALUES (?, ?)";
-    const consultaValues = [idTicktet, contactid]; // Defina o status como 'Pendente' por padrão e utilize a data atual
+      "INSERT INTO tbconsultas (id_ticket, contact_id, flow_id, origin) VALUES (?, ?)";
+    const consultaValues = [idTicktet, contactid, flowid, origin]; // Defina o status como 'Pendente' por padrão e utilize a data atual
 
     // Executar a consulta SQL para inserção na tabela tbconsultas
     connection.query(
@@ -1202,3 +1206,5 @@ server.listen(port, () => {
 });
 
 //swaggerDocs(app, port);
+
+
