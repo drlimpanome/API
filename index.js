@@ -220,7 +220,11 @@ app.post("/generate-pdf", async (req, res) => {
   try {
     await updateDivida(idTicket, divida);
 
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({ 
+	headles: true,
+	executablePath: '/usr/bin/google-chrome',
+    	args: ['--no-sandbox', '--disable-setuid-sandbox']
+});
     const page = await browser.newPage();
 
     const htmlContent = generateHTML({ header, data, divida });
