@@ -31,7 +31,7 @@ import multer from "multer";
 import puppeteer from "puppeteer";
 import FormData from "form-data";
 import axios from "axios";
-import mysql from "mysql/promise";
+import util from "util";
 // import swaggerDocs from "./swagger.js";
 // import mysql from "mysql2/promise";
 
@@ -53,15 +53,6 @@ const handleDisconnect = () => {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: "drlimpanome",
-  });
-
-  connection.promise = () => ({
-    query: (sql, values) => new Promise((resolve, reject) => {
-      connection.query(sql, values, (err, result) => {
-        if (err) reject(err);
-        else resolve([result]);
-      });
-    }),
   });
 
   connection.connect((err) => {
@@ -341,9 +332,12 @@ app.post("/consultDocument/:id", async (req, res) => {
   const idTicket = req.params.id;
 
   try {
-    // Consulta usando Promises
+    // 1. Converter connection.query para Promise
+    const queryAsync = util.promisify(connection.query).bind(connection);
+
+    // 2. Buscar dados do ticket
     const query = 'SELECT contact_id, flow_id, origin FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY ID_CONSULTA DESC LIMIT 1';
-    const [result] = await connection.promise().query(query, [idTicket]); // <-- Usando promise()
+    const result = await queryAsync(query, [idTicket]);
 
     if (result.length === 0) {
       return res.status(404).json({ message: 'Ticket não encontrado' });
@@ -351,15 +345,17 @@ app.post("/consultDocument/:id", async (req, res) => {
 
     const { contact_id, flow_id, origin } = result[0];
 
+    // 3. Verificar origem
     if (origin === "E1S22C3A4L5A6M7A8I9S") {
       // Resposta imediata
       res.status(200).send("ok recebido");
 
+      // Processamento assíncrono em segundo plano
       try {
         const response = await consultDocument(numeroDocumento, idTicket);
         const { status, pdfUrl, totalDebt } = response;
 
-        // Disparar POST
+        // Disparar POST após consulta
         const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
         await axios.post(postUrl, { status, pdfUrl, totalDebt });
         console.log("POST enviado para:", postUrl);
