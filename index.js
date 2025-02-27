@@ -314,26 +314,40 @@ function isFileInUse(filePath) {
  *       400:
  *         description: Erro ao consultar o documento
  */
-app.post("/v/:id", async (req, res) => {
+app.post("/consultDocument/:id", async (req, res) => {
   const { numeroDocumento, origin } = req.body;
   const idTicket = req.params.id;
-  
+
   try {
     if (origin === "E1S22C3A4L5A6M7A8I9S") {
-      const response = await consultDocument(numeroDocumento, idTicket);
+      // Resposta imediata "OK" para a origem específica
+      res.status(200).send("ok recebido");
+
+      // Processamento assíncrono em segundo plano
+      try {
+        const response = await consultDocument(numeroDocumento, idTicket);
+        const { status, pdfUrl, totalDebt } = response;
+
+        // Disparar POST após a consulta terminar
+        const postUrl = `https://drlimpanome.site/consultDocument/${idTicket}`;
+        await axios.post(postUrl, { status, pdfUrl, totalDebt }); // Use axios ou fetch
+        console.log("POST enviado com sucesso para:", postUrl);
+      } catch (error) {
+        console.error("Erro no processamento assíncrono:", error.message);
+      }
     } else {
-      const response = consultDocument(numeroDocumento, idTicket);
+      // Fluxo normal (sem origem especial)
+      const response = await consultDocument(numeroDocumento, idTicket);
+      const { status, pdfUrl, totalDebt } = response;
+      res.status(200).json({
+        status,
+        pdfUrl,
+        totalDebt: formatCurrency(totalDebt),
+      });
     }
-    const { status, pdfUrl, totalDebt } = response;
-    return res.status(200).json({
-      status,
-      pdfUrl,
-      totalDebt: formatCurrency(totalDebt),
-    });
   } catch (error) {
-    console.log(error);
     console.error("Erro ao consultar o documento:", error.message);
-    return res.status(400).json({
+    res.status(400).json({
       status: "error",
       message: "Ocorreu um erro ao consultar o documento.",
     });
@@ -491,7 +505,7 @@ app.post("/ticketGenerate", (req, res) => {
 
     // Consulta SQL para inserir dados na tabela tbconsultas
     const consultaSql =
-      "INSERT INTO tbconsultas (id_ticket, contact_id, flow_id, origin) VALUES (?, ?)";
+      "INSERT INTO tbconsultas (id_ticket, contact_id, flow_id, origin) VALUES (?, ?, ?, ?)";
     const consultaValues = [idTicktet, contactid, flowid, origin]; // Defina o status como 'Pendente' por padrão e utilize a data atual
 
     // Executar a consulta SQL para inserção na tabela tbconsultas
