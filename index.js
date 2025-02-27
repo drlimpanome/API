@@ -30,6 +30,7 @@ import { Op } from "sequelize";
 import multer from "multer";
 import puppeteer from "puppeteer";
 import FormData from "form-data";
+import axios from "axios";
 // import swaggerDocs from "./swagger.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -315,12 +316,23 @@ function isFileInUse(filePath) {
  *         description: Erro ao consultar o documento
  */
 app.post("/consultDocument/:id", async (req, res) => {
-  const { numeroDocumento, origin } = req.body;
+  const { numeroDocumento } = req.body;
   const idTicket = req.params.id;
 
   try {
+    // 1. Buscar dados do ticket no banco de dados
+    const query = 'SELECT contact_id, flow_id, origin FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY ID_CONSULTA DESC LIMIT 1';
+    const [result] = await connection.promise().query(query, [idTicket]); // Usando promise()
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'Ticket não encontrado' });
+    }
+
+    const { contact_id, flow_id, origin } = result[0];
+
+    // 2. Verificar a origem
     if (origin === "E1S22C3A4L5A6M7A8I9S") {
-      // Resposta imediata "OK" para a origem específica
+      // Resposta imediata
       res.status(200).send("ok recebido");
 
       // Processamento assíncrono em segundo plano
@@ -328,15 +340,16 @@ app.post("/consultDocument/:id", async (req, res) => {
         const response = await consultDocument(numeroDocumento, idTicket);
         const { status, pdfUrl, totalDebt } = response;
 
-        // Disparar POST após a consulta terminar
-        const postUrl = `https://drlimpanome.site/consultDocument/${idTicket}`;
-        await axios.post(postUrl, { status, pdfUrl, totalDebt }); // Use axios ou fetch
-        console.log("POST enviado com sucesso para:", postUrl);
+        // Disparar POST após a consulta
+        const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
+        await axios.post(postUrl, { status, pdfUrl, totalDebt });
+        console.log("POST enviado para:", postUrl);
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
       }
+
     } else {
-      // Fluxo normal (sem origem especial)
+      // Fluxo normal
       const response = await consultDocument(numeroDocumento, idTicket);
       const { status, pdfUrl, totalDebt } = response;
       res.status(200).json({
@@ -345,11 +358,12 @@ app.post("/consultDocument/:id", async (req, res) => {
         totalDebt: formatCurrency(totalDebt),
       });
     }
+
   } catch (error) {
-    console.error("Erro ao consultar o documento:", error.message);
-    res.status(400).json({
+    console.error("Erro geral:", error.message);
+    res.status(500).json({
       status: "error",
-      message: "Ocorreu um erro ao consultar o documento.",
+      message: "Erro interno no servidor"
     });
   }
 });
