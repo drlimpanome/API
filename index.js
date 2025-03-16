@@ -31,6 +31,7 @@ import multer from "multer";
 import puppeteer from "puppeteer";
 import FormData from "form-data";
 import axios from "axios";
+import { createPaymentPix } from "./controlers/payment.controller.js";
 // import util from "util";
 // import swaggerDocs from "./swagger.js";
 // import mysql from "mysql2/promise";
@@ -40,7 +41,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 dotenv.config();
 
 const app = express();
-const port = 80;
+const port = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -72,7 +73,6 @@ const handleDisconnect = () => {
       throw err;
     }
   });
-  
 };
 
 handleDisconnect();
@@ -89,7 +89,9 @@ app.use(
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: "Ocorreu um erro interno", error: err.message });
+  res
+    .status(500)
+    .json({ message: "Ocorreu um erro interno", error: err.message });
 });
 
 process.on("unhandledRejection", (reason, promise) => {
@@ -103,57 +105,87 @@ process.on("uncaughtException", (err) => {
 
 function generateHTML(dataMap) {
   // Validação inicial
-  if (!dataMap || !dataMap.header || !dataMap.data || typeof dataMap.data !== 'object') {
-    throw new Error("Dados inválidos: o objeto dataMap está incompleto ou no formato incorreto.");
+  if (
+    !dataMap ||
+    !dataMap.header ||
+    !dataMap.data ||
+    typeof dataMap.data !== "object"
+  ) {
+    throw new Error(
+      "Dados inválidos: o objeto dataMap está incompleto ou no formato incorreto."
+    );
   }
 
   // Gerar HTML do cabeçalho
-  const headerHtml = Object.entries(dataMap.header).map(([key, value]) => `
+  const headerHtml = Object.entries(dataMap.header)
+    .map(
+      ([key, value]) => `
       <tr>
           <th>${key}:</th>
           <td>${value}</td>
       </tr>
-  `).join('');
+  `
+    )
+    .join("");
 
   // Adicionar o total da dívida no cabeçalho
-  const totalDebtFormatted = parseFloat(dataMap.divida).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.').toLocaleString('pt-BR');
+  const totalDebtFormatted = parseFloat(dataMap.divida)
+    .toFixed(2)
+    .replace(".", ",")
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+    .toLocaleString("pt-BR");
   const totalDebtHtml = `
       <tr>
           <th>Total da Dívida:</th>
-          <td>${dataMap.divida === 0 ? 'Nenhuma dívida encontrada.' : `R$ ${totalDebtFormatted}`}</td>
+          <td>${
+            dataMap.divida === 0
+              ? "Nenhuma dívida encontrada."
+              : `R$ ${totalDebtFormatted}`
+          }</td>
       </tr>
   `;
 
   // Gerar tabelas de dívidas
-  const debtsTablesHtml = Object.entries(dataMap.data).map(([tableName, debts]) => {
-    if (!debts.length) return '';
+  const debtsTablesHtml = Object.entries(dataMap.data)
+    .map(([tableName, debts]) => {
+      if (!debts.length) return "";
 
-    // Obter todos os campos presentes nas dívidas desta tabela
-    const allFields = new Set();
-    debts.forEach(debt => {
-      Object.keys(debt).forEach(field => {
-        if (field !== 'table') {
-          allFields.add(field);
-        }
+      // Obter todos os campos presentes nas dívidas desta tabela
+      const allFields = new Set();
+      debts.forEach((debt) => {
+        Object.keys(debt).forEach((field) => {
+          if (field !== "table") {
+            allFields.add(field);
+          }
+        });
       });
-    });
 
-    // Gerar cabeçalho específico para cada tabela
-    const tableHeaders = Array.from(allFields).map(key => `<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`).join('');
+      // Gerar cabeçalho específico para cada tabela
+      const tableHeaders = Array.from(allFields)
+        .map((key) => `<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`)
+        .join("");
 
-    // Gerar linhas de dados
-    const debtsHtml = debts.map(debt => {
-      const debtValues = Array.from(allFields).map(key => {
-        let value = debt[key] || '';
-        if (key === 'valor' && value) {
-          value = `R$ ${parseFloat(value).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.').toLocaleString('pt-BR')}`;
-        }
-        return `<td>${value}</td>`;
-      }).join('');
-      return `<tr>${debtValues}</tr>`;
-    }).join('');
+      // Gerar linhas de dados
+      const debtsHtml = debts
+        .map((debt) => {
+          const debtValues = Array.from(allFields)
+            .map((key) => {
+              let value = debt[key] || "";
+              if (key === "valor" && value) {
+                value = `R$ ${parseFloat(value)
+                  .toFixed(2)
+                  .replace(".", ",")
+                  .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                  .toLocaleString("pt-BR")}`;
+              }
+              return `<td>${value}</td>`;
+            })
+            .join("");
+          return `<tr>${debtValues}</tr>`;
+        })
+        .join("");
 
-    return `
+      return `
       <h5 class="p-2 bg-head mt-4 mb-0">${tableName}</h5>
       <table class="table table-striped table-hover border">
         <thead>
@@ -166,7 +198,8 @@ function generateHTML(dataMap) {
         </tbody>
       </table>
     `;
-  }).join('');
+    })
+    .join("");
 
   // Retornar o HTML completo com ajustes estéticos
   return `
@@ -214,7 +247,6 @@ function generateHTML(dataMap) {
   `;
 }
 
-
 app.post("/generate-pdf", async (req, res) => {
   const { header, data, divida } = req.body;
   const { idTicket, fileName } = req.query;
@@ -224,10 +256,10 @@ app.post("/generate-pdf", async (req, res) => {
   try {
     await updateDivida(idTicket, divida);
 
-    browser = await puppeteer.launch({ 
-    headles: true,
-    executablePath: '/usr/bin/google-chrome',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    browser = await puppeteer.launch({
+      headles: true,
+      executablePath: "/usr/bin/google-chrome",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
@@ -263,7 +295,6 @@ app.post("/generate-pdf", async (req, res) => {
     }
   }
 });
-
 
 // Função para verificar se um arquivo está em uso
 function isFileInUse(filePath) {
@@ -327,11 +358,12 @@ app.post("/consultDocument/:id", async (req, res) => {
     const queryAsync = util.promisify(connection.query).bind(connection);
 
     // 2. Buscar dados do ticket
-    const query = 'SELECT contact_id, flow_id, origin FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY ID_CONSULTA DESC LIMIT 1';
+    const query =
+      "SELECT contact_id, flow_id, origin FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY ID_CONSULTA DESC LIMIT 1";
     const result = await queryAsync(query, [idTicket]);
 
     if (result.length === 0) {
-      return res.status(404).json({ message: 'Ticket não encontrado' });
+      return res.status(404).json({ message: "Ticket não encontrado" });
     }
 
     const { contact_id, flow_id, origin } = result[0];
@@ -344,23 +376,23 @@ app.post("/consultDocument/:id", async (req, res) => {
       // Processamento assíncrono em segundo plano
       try {
         // const response = await consultDocument(numeroDocumento, idTicket);
-        const response = { status: "ok", pdfUrl:"ok", totalDebt: 0 };
+        const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
         const { status, pdfUrl, totalDebt } = response;
 
         // Disparar POST após concsulta
         const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
         const headers = {
-          'X-ACCESS-TOKEN': '1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa'
+          "X-ACCESS-TOKEN":
+            "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
         };
-        
+
         const data = { status, pdfUrl, totalDebt };
-        
+
         await axios.post(postUrl, data, { headers });
         console.log("POST enviado para:", postUrl);
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
       }
-
     } else {
       // Fluxo normal
       const response = await consultDocument(numeroDocumento, idTicket);
@@ -371,12 +403,11 @@ app.post("/consultDocument/:id", async (req, res) => {
         totalDebt: formatCurrency(totalDebt),
       });
     }
-
   } catch (error) {
     console.error("Erro geral:", error.message);
     res.status(500).json({
       status: "error",
-      message: "Erro interno no servidor"
+      message: "Erro interno no servidor",
     });
   }
 });
@@ -702,9 +733,9 @@ app.post("/askCpf/:id", async (req, res) => {
       return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
     }
     await createConsulta(validationResult.document, idTicket, res);
-    
+
     return res.status(200).json({ message: "Updated successfully" });
-    
+
     // Explicitly indicate that response handling is complete
   } catch (e) {
     return res.status(400).json({ message: e.message });
@@ -864,8 +895,8 @@ app.get("/pdf/:id", async (req, res) => {
     }
     // const urlParts = getUrlAndStatus.url.split("_");
     // const fullUrl = `${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
-    
-    const fullUrl = `https://drlimpanome.site/download/${getUrlAndStatus.url}`
+
+    const fullUrl = `https://drlimpanome.site/download/${getUrlAndStatus.url}`;
     const returno = await VerifyFaixa(
       parseFloat(getUrlAndStatus.divida),
       idTicket
@@ -950,11 +981,11 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
 
   try {
     // Salvar o arquivo localmente antes de fazer o upload
-    const filePath = path.join(__dirname, "pdfs", fileName || 'default.pdf');
-    
+    const filePath = path.join(__dirname, "pdfs", fileName || "default.pdf");
+
     // Certifique-se que o arquivo foi corretamente salvo antes de iniciar o upload
     fs.writeFileSync(filePath, file.buffer);
-gi
+    gi;
     await Consultas.update(
       { url: fileName, status_id: 3, divida },
       { where: { id_ticket: idTicket } }
@@ -971,7 +1002,6 @@ gi
     });
   }
 });
-
 
 /**
  * @swagger
@@ -997,18 +1027,17 @@ gi
  *       500:
  *         description: Server error occurred while fetching CPFs
  */
-app.get('/get_cpfs', (req, res) => {
-
+app.get("/get_cpfs", (req, res) => {
   const query = `SELECT REPLACE(REPLACE(documento,'.',''),'-','') AS documento FROM tbconsultas WHERE status_id in (1,4) and LENGTH (DOCUMENTO) = 14 limit 1`;
 
   connection.query(query, (err, results) => {
-      if (err) {
-          console.error('Erro ao obter CPFs:', err);
-          res.status(500).json({ error: 'Erro ao obter CPFs' });
-      } else {
-          const cpfList = results.map(row => row.documento);
-          res.json({ cpfList });
-      }
+    if (err) {
+      console.error("Erro ao obter CPFs:", err);
+      res.status(500).json({ error: "Erro ao obter CPFs" });
+    } else {
+      const cpfList = results.map((row) => row.documento);
+      res.json({ cpfList });
+    }
   });
 });
 
@@ -1050,10 +1079,12 @@ app.get('/get_cpfs', (req, res) => {
  *       500:
  *         description: Erro no servidor
  */
-app.put('/update_status_por_cpf', (req, res) => {
+app.put("/update_status_por_cpf", (req, res) => {
   const { id_ticket, status, bot } = req.body;
   if (!id_ticket || !status || !bot) {
-    return res.status(400).json({ message: 'idTicket, status ou bot ausentes' });
+    return res
+      .status(400)
+      .json({ message: "idTicket, status ou bot ausentes" });
   }
 
   const query = `
@@ -1061,21 +1092,19 @@ app.put('/update_status_por_cpf', (req, res) => {
     SET status_id = ?, updated_at = NOW(), updated_by = ?
     WHERE id_ticket = ?
   `;
-  
+
   connection.query(query, [status, bot, id_ticket], (err, result) => {
     if (err) {
-      console.error('Erro ao atualizar status:', err);
-      return res.status(500).json({ error: 'Erro no servidor' });
+      console.error("Erro ao atualizar status:", err);
+      return res.status(500).json({ error: "Erro no servidor" });
     }
     if (result.affectedRows > 0) {
-      return res.status(200).json({ message: 'Status atualizado com sucesso' });
+      return res.status(200).json({ message: "Status atualizado com sucesso" });
     } else {
-      return res.status(404).json({ message: 'Consulta não encontrada' });
+      return res.status(404).json({ message: "Consulta não encontrada" });
     }
   });
 });
-
-
 
 /**
  * @swagger
@@ -1114,7 +1143,7 @@ app.put('/update_status_por_cpf', (req, res) => {
  */
 const updateDivida = async (id, value) => {
   if (!id || value == null) {
-    return { error: 'ID ou valor ausentes' };
+    return { error: "ID ou valor ausentes" };
   }
 
   // Arredondar para duas casas decimais
@@ -1129,22 +1158,20 @@ const updateDivida = async (id, value) => {
   return new Promise((resolve, reject) => {
     connection.query(query, [valorArredondado, id], (err, result) => {
       if (err) {
-        console.error('Erro ao atualizar dívida:', err);
-        reject({ error: 'Erro no servidor' });
+        console.error("Erro ao atualizar dívida:", err);
+        reject({ error: "Erro no servidor" });
       } else if (result.affectedRows > 0) {
-        resolve({ message: 'Dívida atualizada com sucesso' });
+        resolve({ message: "Dívida atualizada com sucesso" });
       } else {
-        resolve({ error: 'Consulta não encontrada' });
+        resolve({ error: "Consulta não encontrada" });
       }
     });
   });
 };
 
-
-
 const updateUrl = async (id, url) => {
   if (!id || !url) {
-    return { error: 'ID ou URL ausentes' };
+    return { error: "ID ou URL ausentes" };
   }
 
   // url = `https://drlimpanome.site/download/${url}`
@@ -1158,13 +1185,13 @@ const updateUrl = async (id, url) => {
   try {
     const result = await connection.query(query, [url, id]);
     if (result.affectedRows > 0) {
-      return { message: 'URL atualizada com sucesso' };
+      return { message: "URL atualizada com sucesso" };
     } else {
-      return { error: 'Consulta não encontrada' };
+      return { error: "Consulta não encontrada" };
     }
   } catch (err) {
-    console.error('Erro ao atualizar URL:', err);
-    return { error: 'Erro no servidor' };
+    console.error("Erro ao atualizar URL:", err);
+    return { error: "Erro no servidor" };
   }
 };
 
@@ -1197,10 +1224,8 @@ const updateUrl = async (id, url) => {
  *       500:
  *         description: Erro no servidor
  */
-app.get('/get_idTicket', (req, res) => {
-  
+app.get("/get_idTicket", (req, res) => {
   try {
-
     // Documento (CPF ou CNPJ) recebido da solicitação
     let document = req.query.documento;
     console.log(document);
@@ -1211,16 +1236,17 @@ app.get('/get_idTicket', (req, res) => {
       console.log("invalid_document");
       return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
     }
-    
-    document = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 
-    console.log(validationResult, document)
+    document = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+
+    console.log(validationResult, document);
     if (!validationResult.isValid) {
-        // throw new Error(`Erro ao consultar o documento: documento invalido`);
-        return res.status(500).json({ erro: 'Documento inválido' });
-    }  
+      // throw new Error(`Erro ao consultar o documento: documento invalido`);
+      return res.status(500).json({ erro: "Documento inválido" });
+    }
 
-    const query = 'SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1';
+    const query =
+      "SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1";
 
     connection.query(query, [document], (err, result) => {
       if (err) {
@@ -1228,10 +1254,12 @@ app.get('/get_idTicket', (req, res) => {
       }
 
       if (result.length > 0) {
-        console.log(`idTicket: ${result[0].id_ticket }`)
+        console.log(`idTicket: ${result[0].id_ticket}`);
         return res.status(200).json({ idTicket: result[0].id_ticket });
       } else {
-        return res.status(404).json({ message: 'Ticket não encontrado para o documento fornecido' });
+        return res.status(404).json({
+          message: "Ticket não encontrado para o documento fornecido",
+        });
       }
     });
 
@@ -1242,6 +1270,13 @@ app.get('/get_idTicket', (req, res) => {
   }
 });
 
+app.post("/payment/:id", async (req, res) => {
+  const id = req.params.id;
+  await createPaymentPix(req, res, id);
+});
+
+app.use("/qrcode", express.static("qrcode"));
+
 // Criar servidor HTTPS
 const server = http.createServer(/*httpsOptions, */ app);
 
@@ -1251,5 +1286,3 @@ server.listen(port, () => {
 });
 
 //swaggerDocs(app, port);
-
-
