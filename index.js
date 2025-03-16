@@ -75,15 +75,6 @@ const handleDisconnect = () => {
   
 };
 
-connection.promise = () => ({
-  query: (sql, values) => new Promise((resolve, reject) => {
-    connection.query(sql, values, (err, result) => {
-      if (err) reject(err);
-      else resolve([result]);
-    });
-  }),
-});
-
 handleDisconnect();
 
 app.use(express.json());
@@ -234,10 +225,10 @@ app.post("/generate-pdf", async (req, res) => {
     await updateDivida(idTicket, divida);
 
     browser = await puppeteer.launch({ 
-	headles: true,
-	executablePath: '/usr/bin/google-chrome',
-    	args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
+    headles: true,
+    executablePath: '/usr/bin/google-chrome',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page = await browser.newPage();
 
     const htmlContent = generateHTML({ header, data, divida });
@@ -352,12 +343,19 @@ app.post("/consultDocument/:id", async (req, res) => {
 
       // Processamento assíncrono em segundo plano
       try {
-        const response = await consultDocument(numeroDocumento, idTicket);
+        // const response = await consultDocument(numeroDocumento, idTicket);
+        const response = { status: "ok", pdfUrl:"ok", totalDebt: 0 };
         const { status, pdfUrl, totalDebt } = response;
 
-        // Disparar POST após consulta
+        // Disparar POST após concsulta
         const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
-        await axios.post(postUrl, { status, pdfUrl, totalDebt });
+        const headers = {
+          'X-ACCESS-TOKEN': '1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa'
+        };
+        
+        const data = { status, pdfUrl, totalDebt };
+        
+        await axios.post(postUrl, data, { headers });
         console.log("POST enviado para:", postUrl);
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
