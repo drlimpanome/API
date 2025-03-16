@@ -31,7 +31,10 @@ import multer from "multer";
 import puppeteer from "puppeteer";
 import FormData from "form-data";
 import axios from "axios";
-import { createPaymentPix } from "./controlers/payment.controller.js";
+import {
+  createPaymentPix,
+  handleWebhook,
+} from "./controlers/payment.controller.js";
 // import util from "util";
 // import swaggerDocs from "./swagger.js";
 // import mysql from "mysql2/promise";
@@ -1275,7 +1278,9 @@ app.post("/payment/:id", async (req, res) => {
   await createPaymentPix(req, res, id);
 });
 
-app.use("/qrcode", express.static("qrcode"));
+app.post("/webhook", async (req, res) => {
+  await handleWebhook(req, res);
+});
 
 // Criar servidor HTTPS
 const server = http.createServer(/*httpsOptions, */ app);

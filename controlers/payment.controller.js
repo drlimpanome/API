@@ -31,50 +31,23 @@ async function apiRequest({ url, method, data, headers = {} }) {
   }
 }
 
-const salvarImagem = (base64Image, filename) => {
-  // Remover prefixo 'data:image/png;base64,' se existir
-  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
-  const buffer = Buffer.from(base64Data, "base64");
-  const imagePath = path.join("qrcode", filename);
-
-  // Verificar se o diretório 'qrcode' existe; caso contrário, criá-lo
-  if (!fs.existsSync("qrcode")) {
-    fs.mkdirSync("qrcode", { recursive: true });
-    console.log(`Diretório criado: qrcode`);
-  }
-
-  // Salvar o arquivo
-  fs.writeFileSync(imagePath, buffer);
-  console.log(`Imagem salva em: ${imagePath}`);
-  return `/qrcode/${filename}`;
-};
-
 export const createPaymentPix = async (req, res) => {
   const { value, name, cpfCnpj } = req.body;
   const token = process.env.API_PAYMENT_KEY;
 
   try {
     const clienteAsaasId = await criarOuObterCliente(token, name, cpfCnpj);
-    console.log("clienteAsaasId:", clienteAsaasId);
     const cobranca = await criarCobranca(
       clienteAsaasId,
       value,
       "pagamento de consulta",
       token
     );
-    console.log(cobranca.id);
 
-    const { encodedImage, payload } = await obterQrCodePix(cobranca.id, token);
-
-    // Gerar um nome de arquivo único
-    const filename = `${cobranca.id}.png`;
-
-    // Salvar a imagem e obter o caminho público
-    const imageUrl = salvarImagem(encodedImage, filename);
+    const { payload } = await obterQrCodePix(cobranca.id, token);
 
     console.log("qrCode:", payload);
     res.status(201).json({
-      qrcodeUrl: `${req.protocol}://${req.get("host")}${imageUrl}`,
       payload,
     });
   } catch (error) {
@@ -146,13 +119,17 @@ async function obterQrCodePix(paymentId, token) {
 export const handleWebhook = async (req, res) => {
   const { event, payment } = req.body;
 
+  console.log(event, payment);
+
   if (!event || !payment) {
     return res.status(400).json({ error: "Evento ou pagamento inválido" });
   }
 
   try {
     if (event === "PAYMENT_RECEIVED") {
+      console.log("logica de pagamento recebido");
     } else if (event === "PAYMENT_REJECTED" || event === "PAYMENT_FAILED") {
+      console.log("logica de pagamento falhou");
     }
 
     res
