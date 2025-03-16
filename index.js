@@ -41,7 +41,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = 80;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
