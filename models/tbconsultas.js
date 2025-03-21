@@ -27,6 +27,10 @@ const Consultas = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: true,
     },
+    payed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+    },
     divida: {
       type: DataTypes.STRING(50),
       allowNull: true,
