@@ -39,6 +39,10 @@ const Consultas = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: true,
     },
+    payment_id: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
     id_ticket: {
       type: DataTypes.STRING(50),
       allowNull: false,

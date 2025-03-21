@@ -1,7 +1,5 @@
 import axios from "axios";
-
-import fs from "fs";
-import path from "path";
+import { addPaymentIdToTicket } from "./tbConsultas.js";
 
 const ASAAS_API_URL = "https://sandbox.asaas.com/api/v3"; // "https://api.asaas.com/v3";
 const ASAAS_ACCESS_TOKEN = process.env.API_PAYMENT_KEY;
@@ -31,7 +29,7 @@ async function apiRequest({ url, method, data, headers = {} }) {
   }
 }
 
-export const createPaymentPix = async (req, res) => {
+export const createPaymentPix = async (req, res, id) => {
   const { value, name, cpfCnpj } = req.body;
   const token = process.env.API_PAYMENT_KEY;
 
@@ -43,6 +41,8 @@ export const createPaymentPix = async (req, res) => {
       "pagamento de consulta",
       token
     );
+
+    await addPaymentIdToTicket(cobranca.id, id);
 
     const { payload } = await obterQrCodePix(cobranca.id, token);
 
