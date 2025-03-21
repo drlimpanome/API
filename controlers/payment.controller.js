@@ -43,8 +43,8 @@ export const createPaymentPix = async (req, res, id) => {
       token
     );
 
-    await addPaymentIdToTicket(cobranca.id, id);
     await createConsulta(cpfCnpj, id, res);
+    await addPaymentIdToTicket(cobranca.id, id);
 
     const { payload } = await obterQrCodePix(cobranca.id, token);
 
