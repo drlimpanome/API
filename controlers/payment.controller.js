@@ -129,13 +129,14 @@ export const handleWebhook = async (req, res) => {
   try {
     if (event === "PAYMENT_RECEIVED") {
       const payment_id = payment.id;
-      console.log("logica de pagamento recebido");
       await TbConsultas.update(
         {
-          payment_id,
+          payed: true,
         },
         {
-          payed: true,
+          where: {
+            payment_id: payment_id,
+          },
         }
       );
     } else if (event === "PAYMENT_REJECTED" || event === "PAYMENT_FAILED") {
