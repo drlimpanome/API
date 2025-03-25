@@ -392,10 +392,22 @@ app.post("/consultDocument/:id", async (req, res) => {
         const data = { status, pdfUrl, totalDebt };
 
         await axios.post(postUrl, data, { headers });
-        console.log("POST enviado para:", postUrl);
+
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
+
+        const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
+        const headers = {
+          "X-ACCESS-TOKEN":
+            "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
+        };
+
+        const data = { status: "error", pdfUrl: "", totalDebt: 0 };
+
+        await axios.post(postUrl, data, { headers })
       }
+      
+      console.log("POST enviado para:", postUrl);
     } else {
       // Fluxo normal
       const response = await consultDocument(numeroDocumento, idTicket);
