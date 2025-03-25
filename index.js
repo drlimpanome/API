@@ -375,6 +375,7 @@ app.post("/consultDocument/:id", async (req, res) => {
     if (origin === "E1S22C3A4L5A6M7A8I9S") {
       // Resposta imediata
       res.status(200).send("ok recebido");
+      const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
 
       // Processamento assíncrono em segundo plano
       try {
@@ -383,7 +384,7 @@ app.post("/consultDocument/:id", async (req, res) => {
         const { status, pdfUrl, totalDebt } = response;
 
         // Disparar POST após concsulta
-        const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
+        
         const headers = {
           "X-ACCESS-TOKEN":
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
@@ -396,7 +397,6 @@ app.post("/consultDocument/:id", async (req, res) => {
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
 
-        const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
         const headers = {
           "X-ACCESS-TOKEN":
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
