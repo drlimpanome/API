@@ -121,33 +121,6 @@ export async function consultDocument(numeroDocumento, idTicket) {
     }
 }
 
-import fetch from "node-fetch"; // Certifique-se de ter o node-fetch instalado
-import fs from "fs";
-import path from "path";
-
-// Função de validação (já implementada)
-function validateDocument(documento) {
-  // Exemplo simples: CPF com 11 dígitos, CNPJ com 14 dígitos.
-  const cleaned = documento.replace(/\D/g, "");
-  if (cleaned.length === 11) {
-    return { isValid: true, type: "CPF" };
-  } else if (cleaned.length === 14) {
-    return { isValid: true, type: "CNPJ" };
-  }
-  return { isValid: false };
-}
-
-// Funções de atualização de status e dívida (devem ser implementadas conforme sua lógica)
-async function updateStatus(idTicket, status, source) {
-  // Exemplo: Atualize o status do ticket no seu sistema
-  console.log(`Ticket ${idTicket} atualizado para status ${status} (${source}).`);
-}
-
-async function updateDivida(idTicket, debt) {
-  // Exemplo: Atualize o valor da dívida associado ao ticket
-  console.log(`Ticket ${idTicket} atualizado com dívida de ${debt}.`);
-}
-
 export async function newConsultDocument(numeroDocumento, idTicket) {
   try {
     // 1. Validação do documento
