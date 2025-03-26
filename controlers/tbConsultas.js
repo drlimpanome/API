@@ -113,3 +113,17 @@ export async function addPaymentIdToTicket(paymentId, id) {
     throw error;
   }
 }
+
+export async function verifyPayedConsulta(id) {
+  try {
+    const thereisone = await TbConsultas.findOne({
+      where: { id_ticket: id, payed: true },
+    });
+    if (!thereisone) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw error;
+  }
+}

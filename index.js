@@ -13,6 +13,7 @@ import {
   addUrlAws,
   getUrlViaId,
   addUnidade,
+  verifyPayedConsulta,
 } from "./controlers/tbConsultas.js";
 import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
@@ -44,7 +45,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 dotenv.config();
 
 const app = express();
-const port = 80;
+const port = process.env.DB_PORT || 80;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1292,6 +1293,12 @@ app.post("/payment/:id", async (req, res) => {
 
 app.post("/webhook", async (req, res) => {
   await handleWebhook(req, res);
+});
+
+app.get("/verify-status-payment/:id", async (req, res) => {
+  const id = req.params.id;
+  const isPayed = await verifyPayedConsulta(id);
+  return res.status(201).json({ payed: isPayed });
 });
 
 // Criar servidor HTTPS
