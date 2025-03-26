@@ -406,6 +406,60 @@ async function scrapeAndSendData(html,idTicket) {
 	}
 }
 
+export const updateDivida = async (id, value) => {
+    if (!id || value == null) {
+      return { error: "ID ou valor ausentes" };
+    }
+  
+    // Arredondar para duas casas decimais
+    const valorArredondado = parseFloat(value.toFixed(2));
+  
+    const query = `
+      UPDATE tbconsultas 
+      SET divida = ? 
+      WHERE id_ticket = ?
+    `;
+  
+    return new Promise((resolve, reject) => {
+      connection.query(query, [valorArredondado, id], (err, result) => {
+        if (err) {
+          console.error("Erro ao atualizar dívida:", err);
+          reject({ error: "Erro no servidor" });
+        } else if (result.affectedRows > 0) {
+          resolve({ message: "Dívida atualizada com sucesso" });
+        } else {
+          resolve({ error: "Consulta não encontrada" });
+        }
+      });
+    });
+  };
+
+export const updateUrl = async (id, url) => {
+    if (!id || !url) {
+      return { error: "ID ou URL ausentes" };
+    }
+  
+    // url = `https://drlimpanome.site/download/${url}`
+  
+    const query = `
+      UPDATE tbconsultas 
+      SET url = ? 
+      WHERE id_ticket = ?
+    `;
+  
+    try {
+      const result = await connection.query(query, [url, id]);
+      if (result.affectedRows > 0) {
+        return { message: "URL atualizada com sucesso" };
+      } else {
+        return { error: "Consulta não encontrada" };
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar URL:", err);
+      return { error: "Erro no servidor" };
+    }
+  };
+  
 async function updateStatus(id_ticket, status, bot) {
 	const url = `${apiURL}/update_status_por_cpf`;
 

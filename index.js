@@ -19,7 +19,7 @@ import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
 import { createPDF } from "./utils/PdfCreation.js";
 import { generatePresignedUrl, uploadFileToS3 } from "./controlers/Upload.js";
-import { consultDocument, newConsultDocument } from "./utils/consultDocument.js"; // Importar a função consultDocument
+import { consultDocument, newConsultDocument, updateDivida, updateUrl } from "./utils/consultDocument.js"; // Importar a função consultDocument
 import { downloadpdf } from "./utils/consultDocument.js";
 import Consultas from "./models/tbconsultas.js";
 import Ticket from "./models/TbTIcket.js";
@@ -413,7 +413,7 @@ app.post("/consultDocument/:id", async (req, res) => {
       console.log("POST enviado para:", postUrl);
     } else {
       // Fluxo normal
-      const response = await consultDocument(numeroDocumento, idTicket);
+      const response = await newConsultDocument(numeroDocumento, idTicket);
       const { status, pdfUrl, totalDebt } = response;
       res.status(200).json({
         status,
@@ -1124,94 +1124,9 @@ app.put("/update_status_por_cpf", (req, res) => {
   });
 });
 
-/**
- * @swagger
- * /update_divida:
- *   put:
- *     summary: Atualiza a dívida de um ticket
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               id:
- *                 type: integer
- *                 description: ID do ticket
- *               value:
- *                 type: string
- *                 description: Novo valor da dívida
- *     responses:
- *       200:
- *         description: Dívida atualizada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *       400:
- *         description: ID ou valor ausentes
- *       404:
- *         description: Consulta não encontrada
- *       500:
- *         description: Erro no servidor
- */
-const updateDivida = async (id, value) => {
-  if (!id || value == null) {
-    return { error: "ID ou valor ausentes" };
-  }
 
-  // Arredondar para duas casas decimais
-  const valorArredondado = parseFloat(value.toFixed(2));
 
-  const query = `
-    UPDATE tbconsultas 
-    SET divida = ? 
-    WHERE id_ticket = ?
-  `;
 
-  return new Promise((resolve, reject) => {
-    connection.query(query, [valorArredondado, id], (err, result) => {
-      if (err) {
-        console.error("Erro ao atualizar dívida:", err);
-        reject({ error: "Erro no servidor" });
-      } else if (result.affectedRows > 0) {
-        resolve({ message: "Dívida atualizada com sucesso" });
-      } else {
-        resolve({ error: "Consulta não encontrada" });
-      }
-    });
-  });
-};
-
-const updateUrl = async (id, url) => {
-  if (!id || !url) {
-    return { error: "ID ou URL ausentes" };
-  }
-
-  // url = `https://drlimpanome.site/download/${url}`
-
-  const query = `
-    UPDATE tbconsultas 
-    SET url = ? 
-    WHERE id_ticket = ?
-  `;
-
-  try {
-    const result = await connection.query(query, [url, id]);
-    if (result.affectedRows > 0) {
-      return { message: "URL atualizada com sucesso" };
-    } else {
-      return { error: "Consulta não encontrada" };
-    }
-  } catch (err) {
-    console.error("Erro ao atualizar URL:", err);
-    return { error: "Erro no servidor" };
-  }
-};
 
 /**
  * @swagger
