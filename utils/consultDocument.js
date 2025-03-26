@@ -5,6 +5,10 @@ import { decode } from 'html-entities';
 import dotenv from 'dotenv';
 import mysql from 'mysql';
 import { JSDOM } from 'jsdom';
+
+import fs from "fs";
+import path from "path";
+
 dotenv.config();
 
  const apiURL = 'https://drlimpanome.site';
@@ -115,6 +119,136 @@ export async function consultDocument(numeroDocumento, idTicket) {
         console.error('Erro ao consultar o documento:', error.message);
         throw new Error('Ocorreu um erro ao consultar o documento.');
     }
+}
+
+
+export async function newConsultDocument(numeroDocumento, idTicket) {
+  // 1. Validação do documento
+  const validationResult = validateDocument(numeroDocumento);
+  if (!validationResult.isValid) {
+    throw new Error("Erro ao consultar o documento: documento inválido");
+  }
+  
+  // Define os parâmetros com base no tipo (CPF ou CNPJ)
+  const tipoPessoa = validationResult.type === "CPF" ? "F" : "J";
+  const codigoProduto = validationResult.type === "CPF" ? "863" : "753";
+
+  // 2. Monta o payload conforme o novo modelo
+  const payload = {
+    CodigoProduto: codigoProduto,
+    Versao: "20180521",
+    ChaveAcesso: "sJfsj/DsD5ZQ+OZ+uqkn0Q7+dIogaXkYbLkvQF/fLLjIXZbj40kNV2L5TeIFjYUY",
+    Info: {
+      Solicitante: ""
+    },
+    Parametros: {
+      TipoPessoa: tipoPessoa,
+      CPFCNPJ: numeroDocumento
+    },
+    Features: {
+      Solicitacoes: []
+    }
+  };
+
+  // 3. Consulta inicial: envia a requisição para o endpoint
+  const initialUrl = "https://api.sollosconsultas.com.br/json/service.aspx";
+  let initialResponse;
+  try {
+    initialResponse = await fetch(initialUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!initialResponse.ok) {
+      throw new Error(`Erro na consulta inicial: ${initialResponse.statusText}`);
+    }
+  } catch (error) {
+    console.error("Erro ao consultar o documento:", error.message);
+    throw new Error("Ocorreu um erro ao consultar o documento.");
+  }
+  const consultaData = await initialResponse.json();
+
+  // 4. Valida se a consulta foi concluída com sucesso
+  if (consultaData.HEADER?.INFORMACOES_RETORNO?.STATUS_RETORNO?.CODIGO !== "1") {
+    throw new Error("Consulta não concluída com sucesso.");
+  }
+
+  // 5. Obtém o valor total da dívida (totalDebt) – neste exemplo, extraindo de PEND_FINANCEIRAS.VALOR_TOTAL
+  let totalDebt = 0;
+  if (consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.VALOR_TOTAL) {
+    // Converte "33.053,44" para número: remove separador de milhar e troca vírgula por ponto
+    totalDebt = parseFloat(
+      consultaData.CREDCADASTRAL.PEND_FINANCEIRAS.VALOR_TOTAL.replace(/\./g, "").replace(",", ".")
+    );
+  }
+
+  // 6. Extrai a URL para gerar/obter o PDF
+  const pdfGenerationUrl = consultaData.HEADER?.INFORMACOES_RETORNO?.PDF;
+  if (!pdfGenerationUrl) {
+    throw new Error("URL do PDF não encontrada na resposta.");
+  }
+
+  // 7. Consulta o endpoint do PDF para obter os detalhes (incluindo a URL final do PDF)
+  let pdfInfoResponse;
+  try {
+    pdfInfoResponse = await fetch(pdfGenerationUrl, {
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!pdfInfoResponse.ok) {
+      throw new Error(`Erro ao obter detalhes do PDF: ${pdfInfoResponse.statusText}`);
+    }
+  } catch (error) {
+    console.error("Erro ao obter detalhes do PDF:", error.message);
+    throw new Error("Ocorreu um erro ao obter detalhes do PDF.");
+  }
+  const pdfInfo = await pdfInfoResponse.json();
+  if (pdfInfo.status?.codigo !== "1" || !pdfInfo.url) {
+    throw new Error("Erro na geração do PDF.");
+  }
+
+  // 8. Baixa o PDF a partir do link retornado
+  let pdfFileResponse;
+  try {
+    pdfFileResponse = await fetch(pdfInfo.url);
+    if (!pdfFileResponse.ok) {
+      throw new Error(`Erro ao baixar o PDF: ${pdfFileResponse.statusText}`);
+    }
+  } catch (error) {
+    console.error("Erro ao baixar o PDF:", error.message);
+    throw new Error("Ocorreu um erro ao baixar o PDF.");
+  }
+  const pdfBuffer = await pdfFileResponse.arrayBuffer();
+
+  // 9. Define um nome para o arquivo, utilizando informações do campo CLIENTE (ex: "CLAUDIO")
+  let fileName = "documento.pdf";
+  const cliente = consultaData.HEADER?.INFORMACOES_RETORNO?.CLIENTE;
+  if (cliente) {
+    // Exemplo: se CLIENTE for "062.530.576-00-CLAUDIO", usa "CLAUDIO_06253057600.pdf"
+    const [cpfPart, nomePart] = cliente.split("-");
+    fileName = `${(nomePart || "Cliente").trim().replace(/\s/g, "_")}_${(cpfPart || numeroDocumento)
+      .replace(/\D/g, "")
+      .trim()}.pdf`;
+  }
+  const filePath = path.join(__dirname, "pdfs", fileName);
+
+  // 10. Salva o PDF localmente
+  try {
+    fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
+    console.log("PDF salvo localmente:", filePath);
+  } catch (error) {
+    console.error("Erro ao salvar o PDF:", error.message);
+    throw new Error("Ocorreu um erro ao salvar o PDF.");
+  }
+
+  // (Opcional) Atualize o status do idTicket se necessário, utilizando sua função updateStatus
+
+  // 11. Retorna os dados relevantes: status, caminho do PDF e o total da dívida
+  return {
+    status: consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO.CODIGO,
+    pdfUrl: filePath,
+    totalDebt,
+    consultaData
+  };
 }
 
 
