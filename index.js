@@ -19,7 +19,7 @@ import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
 import { createPDF } from "./utils/PdfCreation.js";
 import { generatePresignedUrl, uploadFileToS3 } from "./controlers/Upload.js";
-import { consultDocument } from "./utils/consultDocument.js"; // Importar a função consultDocument
+import { consultDocument, newConsultDocument } from "./utils/consultDocument.js"; // Importar a função consultDocument
 import { downloadpdf } from "./utils/consultDocument.js";
 import Consultas from "./models/tbconsultas.js";
 import Ticket from "./models/TbTIcket.js";
@@ -380,8 +380,10 @@ app.post("/consultDocument/:id", async (req, res) => {
 
       // Processamento assíncrono em segundo plano
       try {
-        const response = await consultDocument(numeroDocumento, idTicket);
+        // const response = await consultDocument(numeroDocumento, idTicket);
         // const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
+        
+         const response = await newConsultDocument(numeroDocumento, idTicket);
         const { status, pdfUrl, totalDebt } = response;
 
         // Disparar POST após concsulta
