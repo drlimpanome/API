@@ -131,6 +131,7 @@ export async function consultDocument(numeroDocumento, idTicket) {
     }
 }
 
+
 export async function newConsultDocument(numeroDocumento, idTicket) {
   try {
     // 1. Validação do documento
@@ -148,16 +149,9 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
       CodigoProduto: codigoProduto,
       Versao: "20180521",
       ChaveAcesso: "sJfsj/DsD5ZQ+OZ+uqkn0Q7+dIogaXkYbLkvQF/fLLjIXZbj40kNV2L5TeIFjYUY",
-      Info: {
-        Solicitante: ""
-      },
-      Parametros: {
-        TipoPessoa: tipoPessoa,
-        CPFCNPJ: numeroDocumento
-      },
-      Features: {
-        Solicitacoes: []
-      }
+      Info: { Solicitante: "" },
+      Parametros: { TipoPessoa: tipoPessoa, CPFCNPJ: numeroDocumento },
+      Features: { Solicitacoes: [] }
     };
     
     // 3. Consulta inicial: envia a requisição para o endpoint
@@ -180,7 +174,6 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     // 5. Extrai o valor total da dívida (totalDebt)
     let totalDebt = 0;
     if (consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.VALOR_TOTAL) {
-      // Converte "33.053,44" para número: remove separador de milhar e troca vírgula por ponto
       totalDebt = parseFloat(
         consultaData.CREDCADASTRAL.PEND_FINANCEIRAS.VALOR_TOTAL.replace(/\./g, "").replace(",", ".")
       );
@@ -214,29 +207,35 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     }
     const pdfBuffer = await pdfFileResponse.arrayBuffer();
     
-    // 9. Define um nome para o arquivo, utilizando informações do campo CLIENTE
-    let fileName = "documento.pdf";
-    const cliente = consultaData.HEADER?.INFORMACOES_RETORNO?.CLIENTE;
-    if (cliente) {
-      // Exemplo: se CLIENTE for "062.530.576-00-CLAUDIO", usa "CLAUDIO_06253057600.pdf"
-      const [cpfPart, nomePart] = cliente.split("-");
-      fileName = `${(nomePart || "Cliente").trim().replace(/\s/g, "_")}_${(cpfPart || numeroDocumento)
-        .replace(/\D/g, "")
-        .trim()}.pdf`;
+    // 9. Define nomeCliente e documento a partir do campo CLIENTE (ex: "062.530.576-00-CLAUDIO")
+    const clienteRaw = consultaData.HEADER?.INFORMACOES_RETORNO?.CLIENTE;
+    let nomeCliente = "Cliente";
+    let documento = numeroDocumento;
+    if (clienteRaw) {
+      const parts = clienteRaw.split("-");
+      if (parts.length >= 2) {
+        documento = parts[0].replace(/\D/g, "");
+        nomeCliente = parts[1].trim();
+      }
     }
-    const filePath = path.join(rootDir, "pdfs", fileName);
+    // Padrão original: nomeCliente (com espaços substituídos por _), seguido do documento, com extensão .pdf
+    const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
     
-    // 10. Salva o PDF localmente
-    fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
-    console.log("PDF salvo localmente:", filePath);
+    // 10. Salva o PDF localmente na pasta "pdfs" (na raiz do projeto)
+    const localFilePath = join(rootDir, "pdfs", fileName);
+    fs.writeFileSync(localFilePath, Buffer.from(pdfBuffer));
+    console.log("PDF salvo localmente:", localFilePath);
     
     // 11. Atualiza o status para "concluído" (status 3) no ticket
     await updateStatus(idTicket, 3, "sollos_api");
     
-    // Retorna os dados relevantes
+    // 12. Gera a URL pública do PDF conforme o padrão original (usa apiURL e a rota /download/)
+    const publicPdfUrl = `${apiURL}/download/${encodeURIComponent(fileName)}`;
+    
+    // Retorna os dados relevantes para o usuário
     return {
       status: consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO.CODIGO,
-      pdfUrl: filePath,
+      pdfUrl: publicPdfUrl,
       totalDebt,
       consultaData
     };
@@ -247,6 +246,7 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     throw error;
   }
 }
+
 
 
 
