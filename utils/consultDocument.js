@@ -9,6 +9,16 @@ import { JSDOM } from 'jsdom';
 import fs from "fs";
 import path from "path";
 
+
+import { fileURLToPath } from 'url';
+import { dirname, resolve, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Como o seu index.js está na raiz, e este arquivo está em UTILS, o diretório raiz é um nível acima:
+const rootDir = resolve(__dirname, '..');
+
 dotenv.config();
 
  const apiURL = 'https://drlimpanome.site';
@@ -214,7 +224,7 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
         .replace(/\D/g, "")
         .trim()}.pdf`;
     }
-    const filePath = path.join(__dirname, "pdfs", fileName);
+    const filePath = path.join(rootDir, "pdfs", fileName);
     
     // 10. Salva o PDF localmente
     fs.writeFileSync(filePath, Buffer.from(pdfBuffer));

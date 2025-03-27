@@ -383,7 +383,7 @@ app.post("/consultDocument/:id", async (req, res) => {
         // const response = await consultDocument(numeroDocumento, idTicket);
         // const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
         
-         const response = await newConsultDocument(numeroDocumento, idTicket);
+         const response = await consultDocument(numeroDocumento, idTicket);
         const { status, pdfUrl, totalDebt } = response;
 
         // Disparar POST após concsulta
