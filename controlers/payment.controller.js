@@ -2,7 +2,7 @@ import axios from "axios";
 import { addPaymentIdToTicket, createConsulta } from "./tbConsultas.js";
 import TbConsultas from "../models/tbconsultas.js";
 
-const ASAAS_API_URL = "https://sandbox.asaas.com/api/v3"; // "https://api.asaas.com/v3";
+const ASAAS_API_URL = "https://api.asaas.com/v3"; // "https://api.asaas.com/v3";
 const ASAAS_ACCESS_TOKEN = process.env.API_PAYMENT_KEY;
 
 // Função utilitária para requisições com tratamento centralizado de erros
