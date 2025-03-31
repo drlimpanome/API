@@ -213,7 +213,7 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     const documento = numeroDocumento.replace(/\D/g, ""); // somente dígitos
 
     // Padrão original: nomeCliente (com espaços substituídos por _), seguido do documento, com extensão .pdf
-    const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
+    const fileName = `${nomeCliente.replace(/\s/g, '_')}-${documento}.pdf`;
     
     // 10. Salva o PDF localmente na pasta "pdfs" (na raiz do projeto)
     const localFilePath = join(rootDir, "pdfs", fileName);
