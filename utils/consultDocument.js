@@ -209,9 +209,9 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     
     // 9. Define nomeCliente e documento a partir do campo CLIENTE (ex: "062.530.576-00-CLAUDIO")
     const nomeClienteRaw = consultaData.CREDCADASTRAL?.DADOS_RECEITA_FEDERAL?.NOME || "Cliente";
-    const nomeCliente = nomeClienteRaw.replace(/\s/g, ""); // remove os espaços
+    const nomeCliente = nomeClienteRaw.replace(/\s/g, "_"); // remove os espaços
     const documento = numeroDocumento.replace(/\D/g, ""); // somente dígitos
-    
+
     // Padrão original: nomeCliente (com espaços substituídos por _), seguido do documento, com extensão .pdf
     const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
     
@@ -223,9 +223,11 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     // 11. Atualiza o status para "concluído" (status 3) no ticket
     await updateStatus(idTicket, 3, "sollos_api");
     
-    // 12. Gera a URL pública do PDF conforme o padrão original (usa apiURL e a rota /download/)
+    // 12. Gera e atualiza a URL pública do PDF conforme o padrão original (usa apiURL e a rota /download/)
     const publicPdfUrl = `${apiURL}/download/${encodeURIComponent(fileName)}`;
-    
+
+    await updateUrl(idTicket, publicPdfUrl);
+
     // Retorna os dados relevantes para o usuário
     return {
       status: consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO.CODIGO,
