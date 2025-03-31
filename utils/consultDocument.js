@@ -208,16 +208,10 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     const pdfBuffer = await pdfFileResponse.arrayBuffer();
     
     // 9. Define nomeCliente e documento a partir do campo CLIENTE (ex: "062.530.576-00-CLAUDIO")
-    const clienteRaw = consultaData.HEADER?.INFORMACOES_RETORNO?.CLIENTE;
-    let nomeCliente = "Cliente";
-    let documento = numeroDocumento;
-    if (clienteRaw) {
-      const parts = clienteRaw.split("-");
-      if (parts.length >= 2) {
-        documento = parts[0].replace(/\D/g, "");
-        nomeCliente = parts[1].trim();
-      }
-    }
+    const nomeClienteRaw = consultaData.CREDCADASTRAL?.DADOS_RECEITA_FEDERAL?.NOME || "Cliente";
+    const nomeCliente = nomeClienteRaw.replace(/\s/g, ""); // remove os espaços
+    const documento = numeroDocumento.replace(/\D/g, ""); // somente dígitos
+    
     // Padrão original: nomeCliente (com espaços substituídos por _), seguido do documento, com extensão .pdf
     const fileName = `${nomeCliente.replace(/\s/g, '_')}_${documento}.pdf`;
     
