@@ -226,7 +226,7 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     // 12. Gera e atualiza a URL pública do PDF conforme o padrão original (usa apiURL e a rota /download/)
     const publicPdfUrl = `${apiURL}/download/${encodeURIComponent(fileName)}`;
 
-    await updateUrl(idTicket, publicPdfUrl);
+    await updateUrl(idTicket, encodeURIComponent(fileName));
 
     // Retorna os dados relevantes para o usuário
     return {
