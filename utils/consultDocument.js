@@ -466,7 +466,7 @@ export const updateUrl = async (id, url) => {
     }
   };
   
-async function updateStatus(id_ticket, status, bot) {
+export async function updateStatus(id_ticket, status, bot) {
 	const url = `${apiURL}/update_status_por_cpf`;
 
 	try {

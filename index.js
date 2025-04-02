@@ -19,7 +19,7 @@ import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
 import { createPDF } from "./utils/PdfCreation.js";
 import { generatePresignedUrl, uploadFileToS3 } from "./controlers/Upload.js";
-import { consultDocument, newConsultDocument, updateDivida, updateUrl } from "./utils/consultDocument.js"; // Importar a função consultDocument
+import { consultDocument, newConsultDocument, updateDivida, updateStatus, updateUrl } from "./utils/consultDocument.js"; // Importar a função consultDocument
 import { downloadpdf } from "./utils/consultDocument.js";
 import Consultas from "./models/tbconsultas.js";
 import Ticket from "./models/TbTIcket.js";
