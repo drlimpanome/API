@@ -399,6 +399,9 @@ app.post("/consultDocument/:id", async (req, res) => {
 
         await axios.post(postUrl, data, { headers });
 
+        await updateDivida(idTicket, divida);
+        await updateStatus(idTicket, 3, 'escalamais_ai');
+
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
 
@@ -410,6 +413,7 @@ app.post("/consultDocument/:id", async (req, res) => {
         const data = { status: "error", pdfUrl: "", totalDebt: 0 };
 
         await axios.post(postUrl, data, { headers })
+        await updateStatus(idTicket, 4, 'escalamais_ai');
       }
       
       console.log("POST enviado para:", postUrl);
