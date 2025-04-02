@@ -399,7 +399,7 @@ app.post("/consultDocument/:id", async (req, res) => {
 
         await axios.post(postUrl, data, { headers });
 
-        await updateDivida(idTicket, divida);
+        await updateDivida(idTicket, 0);
         await updateStatus(idTicket, 3, 'escalamais_ai');
 
       } catch (error) {
