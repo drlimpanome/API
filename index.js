@@ -376,43 +376,48 @@ app.post("/consultDocument/:id", async (req, res) => {
     if (origin === "E1S22C3A4L5A6M7A8I9S") {
       // Resposta imediata
       res.status(200).send("ok recebido");
+      
       const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
+      // Nova URL com :flow e :user substituídos
+      const newUrl = `https://n8n-n8n.qjroh0.easypanel.host/webhook/470e9a36-b5ed-4885-a2a7-22eec4fb810a/470e9a36-b5ed-4885-a2a7-22eec4fb810a/${flow_id}/${contact_id}`;
 
       // Processamento assíncrono em segundo plano
       try {
-        // const response = await consultDocument(numeroDocumento, idTicket);
-        // const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
-        
-        // const response = await consultDocument(numeroDocumento, idTicket);
-
         const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
         const { status, pdfUrl, totalDebt } = response;
 
-        // Disparar POST após concsulta
-        
+        // Dados a enviar nas requisições
+        const data = { status, pdfUrl, totalDebt };
+
+        // Cabeçalho para a requisição do escalamais
         const headers = {
           "X-ACCESS-TOKEN":
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
         };
 
-        const data = { status, pdfUrl, totalDebt };
-
+        // Disparar POST para o endpoint do escalamais
         await axios.post(postUrl, data, { headers });
+        // Disparar POST para a nova URL
+        await axios.post(newUrl, data);
 
         await updateDivida(idTicket, 0);
         await updateStatus(idTicket, 3, 'escalamais_ai');
-
       } catch (error) {
         console.error("Erro no processamento assíncrono:", error.message);
+
+        // Dados para o caso de erro
+        const data = { status: "error", pdfUrl: "", totalDebt: 0 };
 
         const headers = {
           "X-ACCESS-TOKEN":
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
         };
 
-        const data = { status: "error", pdfUrl: "", totalDebt: 0 };
+        // Requisição de erro para o escalamais
+        await axios.post(postUrl, data, { headers });
+        // Requisição de erro para a nova URL
+        await axios.post(newUrl, data);
 
-        await axios.post(postUrl, data, { headers })
         await updateStatus(idTicket, 4, 'escalamais_ai');
       }
       
@@ -435,6 +440,7 @@ app.post("/consultDocument/:id", async (req, res) => {
     });
   }
 });
+
 
 app.get("/", (req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
