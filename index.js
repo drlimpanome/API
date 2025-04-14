@@ -416,7 +416,7 @@ app.post("/consultDocument/:id", async (req, res) => {
         // Requisição de erro para o escalamais
         await axios.post(postUrl, data, { headers });
         // Requisição de erro para a nova URL
-        await axios.post(newUrl, data);
+        await axios.post(newUrl, data, { headers });
 
         await updateStatus(idTicket, 4, 'escalamais_ai');
       }
@@ -719,34 +719,7 @@ app.post("/resetUnidade", async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /askCpf/{id}:
- *   post:
- *     summary: Atualiza o ticket com informações do CPF ou CNPJ
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID do ticket a ser atualizado
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               document:
- *                 type: string
- *                 description: CPF ou CNPJ a ser validado
- *     responses:
- *       200:
- *         description: Atualização realizada com sucesso
- *       400:
- *         description: Documento inválido ou erro ao atualizar
- */
+
 app.post("/askCpf/:id", async (req, res) => {
   try {
     // ID do ticket a ser atualizado
@@ -773,34 +746,6 @@ app.post("/askCpf/:id", async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /faixa:
- *   post:
- *     summary: Retorna a faixa associada ao valor fornecido
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               value:
- *                 type: number
- *                 description: Valor a ser consultado
- *     responses:
- *       200:
- *         description: Retorna a faixa associada ao valor
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 faixa:
- *                   type: string
- *       400:
- *         description: Erro ao consultar a faixa
- */
 app.post("/faixa", async (req, res) => {
   const { value } = req.body;
   try {
@@ -815,33 +760,6 @@ app.post("/faixa", async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /not-consulted:
- *   get:
- *     summary: Busca um cliente que não foi consultado
- *     parameters:
- *       - in: query
- *         name: userId
- *         required: false
- *         schema:
- *           type: string
- *         description: ID do usuário (opcional)
- *     responses:
- *       200:
- *         description: Retorna um cliente que não foi consultado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 notConsulted:
- *                   type: array
- *                   items:
- *                     type: object
- *       400:
- *         description: Erro ao buscar cliente
- */
 app.get("/not-consulted", async (req, res) => {
   try {
     const userId = req.query.userId; // Assuming you're passing user ID in the request
@@ -883,39 +801,6 @@ app.get("/not-consulted", async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /pdf/{id}:
- *   get:
- *     summary: Retorna informações sobre o PDF associado ao ticket
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID do ticket
- *     responses:
- *       200:
- *         description: Retorna informações do PDF, incluindo a URL e a faixa
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 url:
- *                   type: string
- *                 faixa:
- *                   type: string
- *                 unidade:
- *                   type: string
- *                 divida:
- *                   type: string
- *       500:
- *         description: Erro ao consultar informações do PDF
- */
 app.get("/pdf/:id", async (req, res) => {
   try {
     const idTicket = req.params.id;
@@ -954,52 +839,6 @@ app.get("/pdf/:id", async (req, res) => {
 
 const unlinkFile = util.promisify(fs.unlink);
 
-/**
- * @swagger
- * /upload-pdf/{id}:
- *   post:
- *     summary: Faz upload de um PDF associado a um ticket
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID do ticket
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               pdf:
- *                 type: string
- *                 format: binary
- *                 description: Arquivo PDF a ser enviado
- *               fileName:
- *                 type: string
- *                 description: Nome do arquivo
- *               divida:
- *                 type: number
- *                 description: Valor da dívida associada
- *     responses:
- *       200:
- *         description: Upload realizado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 url:
- *                   type: string
- *       400:
- *         description: Nenhum arquivo foi enviado
- *       500:
- *         description: Falha no upload
- */
 app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
   const idTicket = req.params.id;
   const file = req.file; // Arquivo enviado
@@ -1033,30 +872,6 @@ app.post("/upload-pdf/:id", upload.single("pdf"), async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /get_cpfs:
- *   get:
- *     summary: Retrieve CPFs with the maximum ticket ID for each document
- *     responses:
- *       200:
- *         description: A list of documents with their maximum ticket ID
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   documento:
- *                     type: string
- *                   id_ticket:
- *                     type: integer
- *       404:
- *         description: No CPF found
- *       500:
- *         description: Server error occurred while fetching CPFs
- */
 app.get("/get_cpfs", (req, res) => {
   const query = `SELECT REPLACE(REPLACE(documento,'.',''),'-','') AS documento FROM tbconsultas WHERE status_id in (1,4) and LENGTH (DOCUMENTO) = 14 limit 1`;
 
@@ -1071,44 +886,6 @@ app.get("/get_cpfs", (req, res) => {
   });
 });
 
-/**
- * @swagger
- * /update_status:
- *   put:
- *     summary: Atualiza o status de um ticket
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               id:
- *                 type: integer
- *                 description: ID do ticket
- *               status:
- *                 type: integer
- *                 description: Novo status do ticket
- *               bot:
- *                 type: string
- *                 description: Nome do bot que atualiza o status
- *     responses:
- *       200:
- *         description: Status atualizado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *       400:
- *         description: ID, status ou bot ausentes
- *       404:
- *         description: Consulta não encontrada
- *       500:
- *         description: Erro no servidor
- */
 app.put("/update_status_por_cpf", (req, res) => {
   const { id_ticket, status, bot } = req.body;
   if (!id_ticket || !status || !bot) {
@@ -1136,85 +913,6 @@ app.put("/update_status_por_cpf", (req, res) => {
   });
 });
 
-
-
-
-
-/**
- * @swagger
- * /get_idTicket:
- *   get:
- *     summary: Buscar o ID do ticket mais recente para um documento
- *     description: Buscar o ID do ticket mais recente para um documento
- *     parameters:
- *       - in: query
- *         name: documento
- *         schema:
- *           type: string
- *         required: true
- *         description: Documento do ticket
- *     responses:
- *       200:
- *         description: Ticket encontrado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 idTicket:
- *                   type: integer
- *                   description: ID do ticket mais recente
- *       404:
- *         description: Ticket não encontrado
- *       500:
- *         description: Erro no servidor
- */
-app.get("/get_idTicket", (req, res) => {
-  try {
-    // Documento (CPF ou CNPJ) recebido da solicitação
-    let document = req.query.documento;
-    console.log(document);
-
-    // Validação do documento (CPF ou CNPJ)
-    const validationResult = validateDocument(document);
-    if (!validationResult.isValid) {
-      console.log("invalid_document");
-      return res.status(200).json({ message: "invalid_document" }); // Stop execution and return immediately
-    }
-
-    document = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-
-    console.log(validationResult, document);
-    if (!validationResult.isValid) {
-      // throw new Error(`Erro ao consultar o documento: documento invalido`);
-      return res.status(500).json({ erro: "Documento inválido" });
-    }
-
-    const query =
-      "SELECT max(id_ticket) as id_ticket FROM tbconsultas WHERE documento = ? AND status_id in (1,4) LIMIT 1";
-
-    connection.query(query, [document], (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: err });
-      }
-
-      if (result.length > 0) {
-        console.log(`idTicket: ${result[0].id_ticket}`);
-        return res.status(200).json({ idTicket: result[0].id_ticket });
-      } else {
-        return res.status(404).json({
-          message: "Ticket não encontrado para o documento fornecido",
-        });
-      }
-    });
-
-    // Explicitly indicate that response handling is complete
-  } catch (e) {
-    return res.status(400).json({ message: e.message });
-    // Explicitly indicate that response handling is complete
-  }
-});
-
 app.post("/payment/:id", async (req, res) => {
   const id = req.params.id;
   await createPaymentPix(req, res, id);
@@ -1223,6 +921,46 @@ app.post("/payment/:id", async (req, res) => {
 app.post("/webhook", async (req, res) => {
   await handleWebhook(req, res);
 });
+
+app.post("/webhook/start", async (req, res) => {
+  try {
+    const { nome, contactId, telefone, email, cupom, regional } = req.body;
+    // Inserir ou recuperar cliente em tbClientes
+    let [rows] = await db.query(
+      "SELECT id FROM tbClientes WHERE contact_id = ?",
+      [contactId]
+    );
+    let clienteId;
+    if (rows.length > 0) {
+      clienteId = rows[0].id;
+    } else {
+      const [result] = await db.query(
+        "INSERT INTO tbClientes (contact_id, nome, telefone, email, cupom, regional) VALUES (?, ?, ?, ?, ?, ?)",
+        [contactId, nome, telefone, email, cupom, regional]
+      );
+      clienteId = result.insertId;
+    }
+    // Criar consulta/ticket em tbConsultas
+    const statusInicial = "ABERTA";
+    const [consultaResult] = await db.query(
+      "INSERT INTO tbConsultas (cliente_id, status) VALUES (?, ?)",
+      [clienteId, statusInicial]
+    );
+    const idTicket = consultaResult.insertId;
+
+    // Registrar etapa inicial
+    await db.query(
+      "INSERT INTO tbSteps (consulta_id, etapa, detalhes) VALUES (?, ?, ?)",
+      [idTicket, "INICIO_ATENDIMENTO", "Atendimento iniciado via ManyChat"]
+    );
+
+    res.status(200).json({ idTicket });
+  } catch (err) {
+    console.error("Erro no início do atendimento:", err);
+    res.status(500).send("Erro ao iniciar atendimento");
+  }
+});
+
 
 app.get("/verify-status-payment/:id", async (req, res) => {
   const id = req.params.id;
