@@ -377,9 +377,9 @@ app.post("/consultDocument/:id", async (req, res) => {
       // Resposta imediata
       res.status(200).send("ok recebido");
       
-      const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}/`;
+      const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}`;
       // Nova URL com :flow e :user substituídos
-      const newUrl = `https://n8n-n8n.qjroh0.easypanel.host/webhook/470e9a36-b5ed-4885-a2a7-22eec4fb810a/470e9a36-b5ed-4885-a2a7-22eec4fb810a/${flow_id}/${contact_id}`;
+      const mirrorUrl = `https://n8n-n8n.qjroh0.easypanel.host/webhook/470e9a36-b5ed-4885-a2a7-22eec4fb810a/470e9a36-b5ed-4885-a2a7-22eec4fb810a/${flow_id}/${contact_id}`;
 
       // Processamento assíncrono em segundo plano
       try {
@@ -394,11 +394,12 @@ app.post("/consultDocument/:id", async (req, res) => {
           "X-ACCESS-TOKEN":
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
         };
-
-        // Disparar POST para o endpoint do escalamais
-        await axios.post(postUrl, data, { headers });
-        // Disparar POST para a nova URL
-        await axios.post(newUrl, data);
+        try {
+          await axios.post(postUrl, data, { headers }); console.log("POST enviado para:", postUrl);
+          await axios.post(mirrorUrl, data, { headers }); console.log("POST enviado para:", mirrorUrl);
+        } catch (error) {
+          console.log("Erro na requisição:", error.message);
+        }
 
         await updateDivida(idTicket, 0);
         await updateStatus(idTicket, 3, 'escalamais_ai');
@@ -413,15 +414,17 @@ app.post("/consultDocument/:id", async (req, res) => {
             "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
         };
 
-        // Requisição de erro para o escalamais
-        await axios.post(postUrl, data, { headers });
-        // Requisição de erro para a nova URL
-        await axios.post(newUrl, data, { headers });
+        try {
+          await axios.post(postUrl, data, { headers }); console.log("POST enviado para:", postUrl);
+          await axios.post(mirrorUrl, data, { headers }); console.log("POST enviado para:", mirrorUrl);
+        } catch (error) {
+          console.log("Erro na requisição:", error.message);
+        }
 
         await updateStatus(idTicket, 4, 'escalamais_ai');
       }
       
-      console.log("POST enviado para:", postUrl);
+      
     } else {
       // Fluxo normal
       const response = await newConsultDocument(numeroDocumento, idTicket);
