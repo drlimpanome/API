@@ -354,7 +354,7 @@ function isFileInUse(filePath) {
  *         description: Erro ao consultar o documento
  */
 app.post("/consultDocument/:id", async (req, res) => {
-  const { numeroDocumento } = req.body;
+  const { numeroDocumento, tipoConsulta } = req.body;
   const idTicket = req.params.id;
 
   try {
@@ -427,7 +427,7 @@ app.post("/consultDocument/:id", async (req, res) => {
       
     } else {
       // Fluxo normal
-      const response = await newConsultDocument(numeroDocumento, idTicket);
+      const response = await newConsultDocument(numeroDocumento, idTicket, tipoConsulta);
       const { status, pdfUrl, totalDebt } = response;
       res.status(200).json({
         status,

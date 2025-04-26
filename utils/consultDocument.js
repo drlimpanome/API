@@ -131,8 +131,7 @@ export async function consultDocument(numeroDocumento, idTicket) {
     }
 }
 
-
-export async function newConsultDocument(numeroDocumento, idTicket) {
+export async function newConsultDocument(numeroDocumento, idTicket, tipoConsulta) {
   try {
     // 1. Validação do documento
     const validationResult = validateDocument(numeroDocumento);
@@ -142,7 +141,7 @@ export async function newConsultDocument(numeroDocumento, idTicket) {
     
     // Define os parâmetros com base no tipo (CPF ou CNPJ)
     const tipoPessoa = validationResult.type === "CPF" ? "F" : "J";
-    const codigoProduto = validationResult.type === "CPF" ? "863" : "753";
+    const codigoProduto = tipoConsulta || (validationResult.type === "CPF" ? "863" : "753");
     
     // 2. Monta o payload conforme o novo modelo
     const payload = {
