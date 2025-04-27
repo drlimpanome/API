@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import Ticket from "../models/TbTIcket.js";
-import FaixaDivida from "../models/faixaDivida.js";
+import FaixaDivida from "../models/faixaFinanceira.js";
 import DddRegiao from "../models/dddRegiao.js";
 
 // extrai o DDD de um número de telefone
