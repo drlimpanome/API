@@ -16,7 +16,7 @@ function extractDDD(phone) {
 }
 
 // busca região a partir do id do ticket
-async function verifyRegion(idTicket) {
+export async function verifyRegion(idTicket) {
   const tk = await Ticket.findOne({
     where: { id_ticket: idTicket },
     attributes: ['whatsapp_id']
