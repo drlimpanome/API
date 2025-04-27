@@ -1,28 +1,36 @@
-import DataTypes  from 'sequelize'
-import sequelize from '../database.js' // Ensure this path matches your Sequelize connection setup
+// models/faixaDivida.js
+import { DataTypes } from 'sequelize';
+import sequelize from '../database.js';
 
-const FaixaFinanceira = sequelize.define('FaixaFinanceira', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false
-    },
-    min_value: {
-        type: DataTypes.DECIMAL(10, 2), // Adjust precision and scale as needed
-        allowNull: false
-    },
-    max_value: {
-        type: DataTypes.DECIMAL(10, 2), // Adjust precision and scale as needed
-        allowNull: false
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    }
+const FaixaDivida = sequelize.define('FaixaDivida', {
+  faixa: {
+    type: DataTypes.STRING(10),
+    primaryKey: true,
+    allowNull: false
+  },
+  divida: {
+    type: DataTypes.DECIMAL(12,2),
+    allowNull: false
+  },
+  entrada: {
+    type: DataTypes.DECIMAL(12,2),
+    allowNull: false
+  },
+  parcelas: {
+    type: DataTypes.TINYINT,
+    allowNull: false
+  },
+  parcela: {
+    type: DataTypes.DECIMAL(12,2),
+    allowNull: false
+  },
+  total: {
+    type: DataTypes.DECIMAL(12,2),
+    allowNull: false
+  }
 }, {
-    tableName: 'faixa_financeira',
-    timestamps: false // No automatic timestamp fields
+  tableName: 'faixa_divida',
+  timestamps: false
 });
 
-export default FaixaFinanceira;
+export default FaixaDivida;

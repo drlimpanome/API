@@ -921,50 +921,6 @@ app.post("/payment/:id", async (req, res) => {
   await createPaymentPix(req, res, id);
 });
 
-app.post("/webhook", async (req, res) => {
-  await handleWebhook(req, res);
-});
-
-app.post("/webhook/start", async (req, res) => {
-  try {
-    const { nome, contactId, telefone, email, cupom, regional } = req.body;
-    // Inserir ou recuperar cliente em tbClientes
-    let [rows] = await db.query(
-      "SELECT id FROM tbClientes WHERE contact_id = ?",
-      [contactId]
-    );
-    let clienteId;
-    if (rows.length > 0) {
-      clienteId = rows[0].id;
-    } else {
-      const [result] = await db.query(
-        "INSERT INTO tbClientes (contact_id, nome, telefone, email, cupom, regional) VALUES (?, ?, ?, ?, ?, ?)",
-        [contactId, nome, telefone, email, cupom, regional]
-      );
-      clienteId = result.insertId;
-    }
-    // Criar consulta/ticket em tbConsultas
-    const statusInicial = "ABERTA";
-    const [consultaResult] = await db.query(
-      "INSERT INTO tbConsultas (cliente_id, status) VALUES (?, ?)",
-      [clienteId, statusInicial]
-    );
-    const idTicket = consultaResult.insertId;
-
-    // Registrar etapa inicial
-    await db.query(
-      "INSERT INTO tbSteps (consulta_id, etapa, detalhes) VALUES (?, ?, ?)",
-      [idTicket, "INICIO_ATENDIMENTO", "Atendimento iniciado via ManyChat"]
-    );
-
-    res.status(200).json({ idTicket });
-  } catch (err) {
-    console.error("Erro no início do atendimento:", err);
-    res.status(500).send("Erro ao iniciar atendimento");
-  }
-});
-
-
 app.get("/verify-status-payment/:id", async (req, res) => {
   const id = req.params.id;
   const isPayed = await verifyPayedConsulta(id);
