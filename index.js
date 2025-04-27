@@ -15,7 +15,7 @@ import {
   addUnidade,
   verifyPayedConsulta,
 } from "./controlers/tbConsultas.js";
-// import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
+import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
 import { createPDF } from "./utils/PdfCreation.js";
 import { generatePresignedUrl, uploadFileToS3 } from "./controlers/Upload.js";
@@ -807,35 +807,36 @@ app.get("/not-consulted", async (req, res) => {
 app.get("/pdf/:id", async (req, res) => {
   try {
     const idTicket = req.params.id;
-    const getUrlAndStatus = await getUrlViaId(idTicket);
-    if (getUrlAndStatus.status_id !== "3") {
+    const { status_id, url: fileName, divida } = await getUrlViaId(idTicket);
+
+    if (status_id !== "3") {
       throw new Error("A consulta ainda não foi finalizada.");
     }
-    // const urlParts = getUrlAndStatus.url.split("_");
-    // const fullUrl = `${urlParts[0].replace(/ /g, "_")}_${urlParts[1]}`;
 
-    const fullUrl = `https://drlimpanome.site/download/${getUrlAndStatus.url}`;
-    const returno = await VerifyFaixa(
-      parseFloat(getUrlAndStatus.divida),
-      idTicket
-    );
-    // await addUnidade(region, idTicket)
+    const fullUrl = `https://drlimpanome.site/download/${fileName}`;
+    // chama nosso controller refeito
+    const faixaData = await VerifyFaixa(parseFloat(divida), idTicket);
 
     return res.status(200).json({
       message: "Upload successful",
-      url: fullUrl,
-      faixa: returno.name,
-      unidade: returno.region,
-      divida: formatCurrency(returno.valor),
+      url:      fullUrl,
+      faixa:    faixaData.faixa,
+      divida:   formatCurrency(faixaData.divida),
+      entrada:  formatCurrency(faixaData.entrada),
+      parcelas: faixaData.parcelas,
+      parcela:  formatCurrency(faixaData.parcela),
+      total:    formatCurrency(faixaData.total),
+      unidade:  faixaData.region
     });
   } catch (err) {
-    console.log(err);
-    const idTicket = req.params.id;
-    const region = await verifyRegion(idTicket);
-    // await addUnidade(region, idTicket)
+    console.error(err);
+    // em caso de qualquer erro, ainda tentamos retornar região
+    let unidade = null;
+    try { unidade = await verifyRegion(req.params.id); } catch {}
     return res.status(200).json({
-      unidade: region,
       message: "ocorreu um erro",
+      error:   err.message,
+      unidade
     });
   }
 });

@@ -1,24 +1,25 @@
-import { Op } from "sequelize";
-import Ticket from "../models/TbTIcket.js";
-import FaixaDivida from "../models/faixaFinanceira.js";
-import DddRegiao from "../models/dddRegiao.js";
+import { Op } from 'sequelize';
+import FaixaDivida from '../models/faixaDivida.js';
+import DddRegiao   from '../models/dddRegiao.js';
+import Ticket      from '../models/TbTIcket.js';
 
-// extrai o DDD de um número de telefone
+// extrai DDD de um número de telefone brasileiro
 function extractDDD(phone) {
-  const onlyDigits = phone.replace(/\D/g, "");
-  if (onlyDigits.startsWith("55") && onlyDigits.length > 10) {
-    return onlyDigits.substring(2, 4);
-  } else if (onlyDigits.length === 10) {
-    return onlyDigits.substring(0, 2);
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length > 10) {
+    return digits.substr(2, 2);
+  }
+  if (digits.length === 10) {
+    return digits.substr(0, 2);
   }
   return null;
 }
 
-// obtém a região a partir do DDD usando a tabela ddd_regioes
-async function getRegionByTicketId(idTicket) {
+// busca região a partir do id do ticket
+async function verifyRegion(idTicket) {
   const tk = await Ticket.findOne({
     where: { id_ticket: idTicket },
-    attributes: ["whatsapp_id"],
+    attributes: ['whatsapp_id']
   });
   if (!tk?.whatsapp_id) return null;
 
@@ -26,67 +27,63 @@ async function getRegionByTicketId(idTicket) {
   if (!ddd) return null;
 
   const reg = await DddRegiao.findOne({ where: { ddd } });
-  return reg ? reg.regiao : null;
+  return reg?.regiao ?? null;
 }
 
-// determina a faixa e todos os valores associados pela tabela faixa_divida
+// determina a faixa e todos os valores associados (entrada, parcelas, parcela, total)
 async function getFaixaData(valor) {
-  // procura a primeira faixa cujo limite (divida) seja >= valor
-  let row = await FaixaDivida.findOne({
+  // busca a menor faixa cuja dívida mínima seja <= valor
+  let faixaRow = await FaixaDivida.findOne({
     where: { divida: { [Op.gte]: valor } },
-    order: [["divida", "ASC"]],
+    order: [['divida', 'ASC']]
   });
 
-  // se valor for maior do que qualquer limite, pega a última faixa
-  if (!row) {
-    row = await FaixaDivida.findOne({
-      order: [["divida", "DESC"]],
+  // se valor maior que qualquer divida, pega a última faixa
+  if (!faixaRow) {
+    faixaRow = await FaixaDivida.findOne({
+      order: [['divida', 'DESC']]
     });
   }
 
-  return row; 
-  // row contém: { faixa, divida, entrada, parcelas, parcela, total }
+  return faixaRow;
 }
 
-app.get("/pdf/:id", async (req, res) => {
-  try {
-    const idTicket = req.params.id;
-    const { status_id, url: fileName, divida } = await getUrlViaId(idTicket);
-
-    if (status_id !== "3") {
-      throw new Error("A consulta ainda não foi finalizada.");
-    }
-
-    // constrói a URL de download
-    const fullUrl = `https://drlimpanome.site/download/${fileName}`;
-
-    // formata a dívida original
-    const dividaNum = parseFloat(divida);
-    const dividaFmt = formatCurrency(dividaNum);
-
-    // busca os dados da faixa
-    const faixaRow = await getFaixaData(dividaNum);
-
-    // busca a região (campo unidade)
-    const unidade = await getRegionByTicketId(idTicket);
-
-    // responde com todos os campos do novo modelo
-    return res.status(200).json({
-      message: "Upload successful",
-      url: fullUrl,
-      faixa:    faixaRow.faixa,                    // e.g. "FAIXA 10"
-      divida:   dividaFmt,                         // formatação moeda
-      entrada:  formatCurrency(faixaRow.entrada),
-      parcelas: faixaRow.parcelas,
-      parcela:  formatCurrency(faixaRow.parcela),
-      total:    formatCurrency(faixaRow.total),
-      unidade,                                    // string ou null
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(200).json({
-      message: "ocorreu um erro",
-      error:   err.message,
-    });
+/**
+ * Retorna um objeto com:
+ * {
+ *   faixa, divida, entrada, parcelas, parcela, total, region
+ * }
+ */
+export default async function VerifyFaixa(valor, idTicket) {
+  // valida entrada
+  const num = Number(valor);
+  if (!isFinite(num)) {
+    throw new Error('Valor inválido para faixa');
   }
-});
+
+  // busca dados da faixa
+  const faixaRow = await getFaixaData(num);
+  const region   = await verifyRegion(idTicket);
+
+  if (!faixaRow) {
+    return {
+      faixa:    null,
+      divida:   num,
+      entrada:  null,
+      parcelas: null,
+      parcela:  null,
+      total:    null,
+      region
+    };
+  }
+
+  return {
+    faixa:    faixaRow.faixa,
+    divida:   parseFloat(faixaRow.divida),
+    entrada:  parseFloat(faixaRow.entrada),
+    parcelas: faixaRow.parcelas,
+    parcela:  parseFloat(faixaRow.parcela),
+    total:    parseFloat(faixaRow.total),
+    region
+  };
+}
