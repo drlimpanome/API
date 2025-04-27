@@ -15,7 +15,7 @@ import {
   addUnidade,
   verifyPayedConsulta,
 } from "./controlers/tbConsultas.js";
-import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
+// import VerifyFaixa, { verifyRegion } from "./controlers/faixaControler.js";
 import dotenv from "dotenv";
 import { createPDF } from "./utils/PdfCreation.js";
 import { generatePresignedUrl, uploadFileToS3 } from "./controlers/Upload.js";
