@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import FaixaDivida from '../models/faixaDivida.js';
+import FaixaDivida from '../models/faixaFinanceira.js';
 import DddRegiao   from '../models/dddRegiao.js';
 import Ticket      from '../models/TbTIcket.js';
 
