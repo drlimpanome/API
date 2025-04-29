@@ -27,7 +27,7 @@ export async function verifyRegion(idTicket) {
   if (!ddd) return null;
 
   const reg = await DddRegiao.findOne({ where: { ddd } });
-  return reg?.regiao ?? null;
+  return reg?.sigla_regiao ?? null;
 }
 
 // determina a faixa e todos os valores associados (entrada, parcelas, parcela, total)
