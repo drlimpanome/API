@@ -170,13 +170,16 @@ export async function newConsultDocument(numeroDocumento, idTicket, tipoConsulta
       throw new Error("Consulta não concluída com sucesso.");
     }
     
-    // 5. Extrai o valor total da dívida (totalDebt)
-    let totalDebt = 0;
-    if (consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.VALOR_TOTAL) {
-      totalDebt = parseFloat(
-        consultaData.CREDCADASTRAL.PEND_FINANCEIRAS.VALOR_TOTAL.replace(/\./g, "").replace(",", ".")
-      );
-    }
+    // 5. Extrai e consolida dívidas únicas para calcular totalDebt
+    const ocorrencias = consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.OCORRENCIAS || [];
+    const uniqueDebts = [];
+    ocorrencias.forEach(({ DATA_VENCIMENTO, VALOR }) => {
+      const date = DATA_VENCIMENTO;
+      const value = parseFloat(VALOR.replace(/\./g, "").replace(',', '.'));
+      const isDuplicate = uniqueDebts.some(d => d.date === date && d.value === value);
+      if (!isDuplicate) uniqueDebts.push({ date, value });
+    });
+    const totalDebt = uniqueDebts.reduce((sum, d) => sum + d.value, 0);
     
     // Atualiza o valor da dívida no ticket
     await updateDivida(idTicket, totalDebt);
