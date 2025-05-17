@@ -173,11 +173,17 @@ export async function newConsultDocument(numeroDocumento, idTicket, tipoConsulta
     // 5. Extrai e consolida dívidas únicas para calcular totalDebt
     const ocorrencias = consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.OCORRENCIAS || [];
     const uniqueDebts = [];
-    ocorrencias.forEach(({ DATA_VENCIMENTO, VALOR }) => {
+    ocorrencias.forEach(({ DATA_VENCIMENTO, VALOR, CONTRATO }) => {
       const date = DATA_VENCIMENTO;
       const value = parseFloat(VALOR.replace(/\./g, "").replace(',', '.'));
-      const isDuplicate = uniqueDebts.some(d => d.date === date && d.value === value);
-      if (!isDuplicate) uniqueDebts.push({ date, value });
+      const contract = CONTRATO;
+      const isDuplicate = uniqueDebts.some(d => 
+        (d.date === date && d.value === value) ||
+        (d.contract === contract)
+      );
+      if (!isDuplicate) {
+        uniqueDebts.push({ date, value, contract });
+      }
     });
     const totalDebt = uniqueDebts.reduce((sum, d) => sum + d.value, 0);
     
