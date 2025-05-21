@@ -54,36 +54,37 @@ async function getFaixaData(valor) {
  *   faixa, divida, entrada, parcelas, parcela, total, region
  * }
  */
-export default async function VerifyFaixa(valor, idTicket) {
+export default async function VerifyFaixa(valorOriginal, idTicket) {
   // valida entrada
-  const num = Number(valor);
-  if (!isFinite(num)) {
-    throw new Error('Valor inválido para faixa');
-  }
+  const num = Number(valorOriginal);
+  if (!isFinite(num)) throw new Error("Valor inválido para faixa");
 
   // busca dados da faixa
-  const faixaRow = await getFaixaData(num);
-  const region   = await verifyRegion(idTicket);
+  let faixaRow = await getFaixaData(num);
+  const region = await verifyRegion(idTicket);
 
   if (!faixaRow) {
     return {
-      faixa:    null,
-      divida:   num,
-      entrada:  null,
-      parcelas: null,
-      parcela:  null,
-      total:    null,
+      faixa:         null,
+      dividaOriginal: num,          // mantém o valor real
+      dividaFaixa:    null,         // sem faixa
+      entrada:       null,
+      parcelas:     null,
+      parcela:       null,
+      total:         null,
       region
     };
   }
 
   return {
-    faixa:    faixaRow.faixa,
-    divida:   parseFloat(faixaRow.divida),
-    entrada:  parseFloat(faixaRow.entrada),
-    parcelas: faixaRow.parcelas,
-    parcela:  parseFloat(faixaRow.parcela),
-    total:    parseFloat(faixaRow.total),
+    faixa:          faixaRow.faixa,
+    dividaOriginal: num,                              // valor real
+    dividaFaixa:    parseFloat(faixaRow.divida),      // limite da faixa
+    entrada:        parseFloat(faixaRow.entrada),
+    parcelas:      faixaRow.parcelas,
+    parcela:        parseFloat(faixaRow.parcela),
+    total:          parseFloat(faixaRow.total),
     region
   };
 }
+

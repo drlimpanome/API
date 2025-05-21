@@ -809,28 +809,25 @@ app.get("/pdf/:id", async (req, res) => {
     const idTicket = req.params.id;
     const { status_id, url: fileName, divida } = await getUrlViaId(idTicket);
 
-    if (status_id !== "3") {
-      throw new Error("A consulta ainda não foi finalizada.");
-    }
+    if (status_id !== "3") throw new Error("A consulta ainda não foi finalizada.");
 
     const fullUrl = `https://drlimpanome.site/download/${fileName}`;
-    // chama nosso controller refeito
     const faixaData = await VerifyFaixa(parseFloat(divida), idTicket);
 
     return res.status(200).json({
-      message: "Upload successful",
+      message:  "Upload successful",
       url:      fullUrl,
       faixa:    faixaData.faixa,
-      divida:   formatCurrency(faixaData.divida),
+      divida:   formatCurrency(faixaData.dividaOriginal),  // aqui o valor real
       entrada:  formatCurrency(faixaData.entrada),
       parcelas: faixaData.parcelas,
       parcela:  formatCurrency(faixaData.parcela),
       total:    formatCurrency(faixaData.total),
-      unidade:  faixaData.region
+      unidade:  faixaData.region,
+      faixaLimite: formatCurrency(faixaData.dividaFaixa)  // opcional, se quiser expor
     });
   } catch (err) {
     console.error(err);
-    // em caso de qualquer erro, ainda tentamos retornar região
     let unidade = null;
     try { unidade = await verifyRegion(req.params.id); } catch {}
     return res.status(200).json({
@@ -840,6 +837,7 @@ app.get("/pdf/:id", async (req, res) => {
     });
   }
 });
+
 
 const unlinkFile = util.promisify(fs.unlink);
 
