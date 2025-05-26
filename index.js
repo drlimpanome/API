@@ -427,13 +427,16 @@ app.post("/consultDocument/:id", async (req, res) => {
       
     } else {
       // Fluxo normal
-      const response = await newConsultDocument(numeroDocumento, idTicket, tipoConsulta);
-      const { status, pdfUrl, totalDebt } = response;
-      res.status(200).json({
-        status,
-        pdfUrl,
-        totalDebt: formatCurrency(totalDebt),
-      });
+      try {
+        const { status, pdfUrl, totalDebt } = newConsultDocument(numeroDocumento, idTicket, tipoConsulta);
+        return res.json({ status, pdfUrl, totalDebt });
+      } catch (err) {
+        console.error("falha em newConsultDocument:", err.message);
+        return res.status(400).json({
+          status:  "error",
+          message: err.message
+        });
+      }
     }
   } catch (error) {
     console.error("Erro geral:", error.message);
