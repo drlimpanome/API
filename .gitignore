@@ -1,4 +1,30 @@
-/node_modules
-/pdfs
-/*.env
-/.env
+# Node / ambiente
+node_modules/
+.env
+
+# Logs
+*.log
+
+# Instaladores e binários
+*.zip
+*.msi
+*.exe
+
+# Certificados e chaves
+*.pem
+*.key
+*.crt
+
+# Pastas geradas
+Certbot*/
+OpenSSL/
+nginx-*.zip
+
+# Arquivos de configuração local
+config/config.js
+
+# Outros artefatos
+*.pdf
+*.bat
+*.ps1
+*.vbs
