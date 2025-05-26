@@ -166,9 +166,14 @@ export async function newConsultDocument(numeroDocumento, idTicket, tipoConsulta
     const consultaData = await initialResponse.json();
     
     // 4. Valida se a consulta foi concluída com sucesso
-    if (consultaData.HEADER?.INFORMACOES_RETORNO?.STATUS_RETORNO?.CODIGO !== "1") {
-      throw new Error("Consulta não concluída com sucesso.");
+    if (consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO.CODIGO !== "1") {
+      console.warn(
+        "Status diferente de 1:",
+        consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO
+      );
+      return { status: consultaData.HEADER.INFORMACOES_RETORNO.STATUS_RETORNO.CODIGO, pdfUrl: null, totalDebt: 0 };
     }
+
     
     // 5. Extrai e consolida dívidas únicas para calcular totalDebt
     const ocorrencias = consultaData.CREDCADASTRAL?.PEND_FINANCEIRAS?.OCORRENCIAS || [];
