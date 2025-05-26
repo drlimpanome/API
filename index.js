@@ -354,35 +354,90 @@ function isFileInUse(filePath) {
  *         description: Erro ao consultar o documento
  */
 app.post("/consultDocument/:id", async (req, res) => {
-  const { numeroDocumento, tipoConsulta = "cpf" } = req.body;
+  const { numeroDocumento, tipoConsulta } = req.body;
   const idTicket = req.params.id;
 
   try {
-    // 1) Promisify da query
+    // 1. Converter connection.query para Promise
     const queryAsync = util.promisify(connection.query).bind(connection);
 
-    // 2) Verifica se o ticket existe
+    // 2. Buscar dados do ticket
     const query =
-      "SELECT id_consulta FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY id_consulta DESC LIMIT 1";
+      "SELECT contact_id, flow_id, origin FROM drlimpanome.tbconsultas WHERE id_ticket = ? ORDER BY ID_CONSULTA DESC LIMIT 1";
     const result = await queryAsync(query, [idTicket]);
 
     if (result.length === 0) {
       return res.status(404).json({ message: "Ticket não encontrado" });
     }
 
-    // 3) Chama sempre o fluxo normal
-    const response = await newConsultDocument(numeroDocumento, idTicket, tipoConsulta);
-    const { status, pdfUrl, totalDebt } = response;
+    const { contact_id, flow_id, origin } = result[0];
 
-    return res.status(200).json({
-      status,
-      pdfUrl,
-      totalDebt: formatCurrency(totalDebt),
-    });
+    // 3. Verificar origem
+    if (origin === "E1S22C3A4L5A6M7A8I9S") {
+      // Resposta imediata
+      res.status(200).send("ok recebido");
+      
+      const postUrl = `https://app.escalamais.ai/api/users/${contact_id}/send/${flow_id}`;
+      // Nova URL com :flow e :user substituídos
+      const mirrorUrl = `https://n8n-n8n.qjroh0.easypanel.host/webhook/470e9a36-b5ed-4885-a2a7-22eec4fb810a/470e9a36-b5ed-4885-a2a7-22eec4fb810a/${flow_id}/${contact_id}`;
 
+      // Processamento assíncrono em segundo plano
+      try {
+        const response = { status: "ok", pdfUrl: "ok", totalDebt: 0 };
+        const { status, pdfUrl, totalDebt } = response;
+
+        // Dados a enviar nas requisições
+        const data = { status, pdfUrl, totalDebt };
+
+        // Cabeçalho para a requisição do escalamais
+        const headers = {
+          "X-ACCESS-TOKEN":
+            "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
+        };
+        try {
+          await axios.post(postUrl, data, { headers }); console.log("POST enviado para:", postUrl);
+          await axios.post(mirrorUrl, data, { headers }); console.log("POST enviado para:", mirrorUrl);
+        } catch (error) {
+          console.log("Erro na requisição:", error.message);
+        }
+
+        await updateDivida(idTicket, 0);
+        await updateStatus(idTicket, 3, 'escalamais_ai');
+      } catch (error) {
+        console.error("Erro no processamento assíncrono:", error.message);
+
+        // Dados para o caso de erro
+        const data = { status: "error", pdfUrl: "", totalDebt: 0 };
+
+        const headers = {
+          "X-ACCESS-TOKEN":
+            "1176642.kGldwbNUtGy6EHT3hwO4lTuRECowxt4CE08hGHsAgNTXFa",
+        };
+
+        try {
+          await axios.post(postUrl, data, { headers }); console.log("POST enviado para:", postUrl);
+          await axios.post(mirrorUrl, data, { headers }); console.log("POST enviado para:", mirrorUrl);
+        } catch (error) {
+          console.log("Erro na requisição:", error.message);
+        }
+
+        await updateStatus(idTicket, 4, 'escalamais_ai');
+      }
+      
+      
+    } else {
+      // Fluxo normal
+      const response = await newConsultDocument(numeroDocumento, idTicket, tipoConsulta);
+      const { status, pdfUrl, totalDebt } = response;
+      res.status(200).json({
+        status,
+        pdfUrl,
+        totalDebt: formatCurrency(totalDebt),
+      });
+    }
   } catch (error) {
-    console.error("Erro geral em /consultDocument:", error);
-    return res.status(500).json({
+    console.error("Erro geral:", error.message);
+    res.status(500).json({
       status: "error",
       message: "Erro interno no servidor",
     });
