@@ -447,6 +447,7 @@ app.post("/consultDocument/:id", async (req, res) => {
   }
 });
 
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 app.get("/", (req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
